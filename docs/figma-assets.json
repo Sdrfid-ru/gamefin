@@ -1,0 +1,402 @@
+[
+  {
+    "figmaNode": "2058:326",
+    "sourceName": "imgWant",
+    "file": "app/src/main/res/drawable-nodpi/figma_f20ea.png"
+  },
+  {
+    "figmaNode": "2058:326",
+    "sourceName": "imgSaving",
+    "file": "app/src/main/res/drawable-nodpi/figma_933ee.png"
+  },
+  {
+    "figmaNode": "2058:326",
+    "sourceName": "imgNeed",
+    "file": "app/src/main/res/drawable-nodpi/figma_e8c09.png"
+  },
+  {
+    "figmaNode": "2058:326",
+    "sourceName": "img",
+    "file": "app/src/main/res/drawable-nodpi/figma_3bb15.png"
+  },
+  {
+    "figmaNode": "2058:326",
+    "sourceName": "img00001",
+    "file": "app/src/main/res/drawable-nodpi/figma_e30c2.png"
+  },
+  {
+    "figmaNode": "2058:326",
+    "sourceName": "imgLogo2",
+    "file": "app/src/main/res/drawable-nodpi/figma_5dd4e.png"
+  },
+  {
+    "figmaNode": "2058:326",
+    "sourceName": "imgGroup1",
+    "file": "app/src/main/res/raw/figma_b2997.svg"
+  },
+  {
+    "figmaNode": "2058:326",
+    "sourceName": "imgGroup2",
+    "file": "app/src/main/res/raw/figma_52d23.svg"
+  },
+  {
+    "figmaNode": "2058:326",
+    "sourceName": "imgGroup3",
+    "file": "app/src/main/res/raw/figma_ec6af.svg"
+  },
+  {
+    "figmaNode": "2058:326",
+    "sourceName": "imgUnion",
+    "file": "app/src/main/res/raw/figma_d5e75.svg"
+  },
+  {
+    "figmaNode": "2058:326",
+    "sourceName": "imgHeart1",
+    "file": "app/src/main/res/raw/figma_d51ce.svg"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgPiggyBank",
+    "file": "app/src/main/res/drawable-nodpi/figma_ba1a5.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgSetting",
+    "file": "app/src/main/res/raw/figma_aaf70.svg"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgAdd",
+    "file": "app/src/main/res/raw/figma_a8b7c.svg"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgProfile1",
+    "file": "app/src/main/res/raw/figma_e2b81.svg"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgAward1",
+    "file": "app/src/main/res/raw/figma_c0512.svg"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgChart",
+    "file": "app/src/main/res/raw/figma_12df1.svg"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgPet",
+    "file": "app/src/main/res/raw/figma_3e7e7.svg"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "img",
+    "file": "app/src/main/res/drawable-nodpi/figma_ce1ad.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgPetBed1",
+    "file": "app/src/main/res/drawable-nodpi/figma_6d3c3.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgComfyUiTempUuktk000031",
+    "file": "app/src/main/res/drawable-nodpi/figma_8be7a.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "img31",
+    "file": "app/src/main/res/drawable-nodpi/figma_6dc23.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgCoin",
+    "file": "app/src/main/res/drawable-nodpi/figma_ec083.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgCrystal",
+    "file": "app/src/main/res/drawable-nodpi/figma_4c8a6.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgImg",
+    "file": "app/src/main/res/drawable-nodpi/figma_268b2.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgFood",
+    "file": "app/src/main/res/drawable-nodpi/figma_a49fe.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgEnergy",
+    "file": "app/src/main/res/drawable-nodpi/figma_3bcb0.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgHp",
+    "file": "app/src/main/res/drawable-nodpi/figma_1e1d8.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgComb",
+    "file": "app/src/main/res/drawable-nodpi/figma_2ff9d.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgTasks",
+    "file": "app/src/main/res/drawable-nodpi/figma_9ade2.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgShoppingCart",
+    "file": "app/src/main/res/drawable-nodpi/figma_43524.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgGift",
+    "file": "app/src/main/res/drawable-nodpi/figma_0d0bf.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgCalendar",
+    "file": "app/src/main/res/drawable-nodpi/figma_4bf93.png"
+  },
+  {
+    "figmaNode": "2039:1013",
+    "sourceName": "imgHome",
+    "file": "app/src/main/res/raw/figma_9116b.svg"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgGroup1",
+    "file": "app/src/main/res/raw/figma_b2997.svg"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgSetting",
+    "file": "app/src/main/res/raw/figma_aaf70.svg"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgHat1",
+    "file": "app/src/main/res/raw/figma_57abf.svg"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgAccessories1",
+    "file": "app/src/main/res/raw/figma_2e27c.svg"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgCloth1",
+    "file": "app/src/main/res/raw/figma_1b44f.svg"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgPalette",
+    "file": "app/src/main/res/raw/figma_a5656.svg"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "img2",
+    "file": "app/src/main/res/drawable-nodpi/figma_ce1ad.png"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgPetBed1",
+    "file": "app/src/main/res/drawable-nodpi/figma_6d3c3.png"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgComfyUiTempUuktk000031",
+    "file": "app/src/main/res/drawable-nodpi/figma_fdf3b.png"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgComfyUiTempUuktk32",
+    "file": "app/src/main/res/drawable-nodpi/figma_e453d.png"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgComfyUiTempUuktk33",
+    "file": "app/src/main/res/drawable-nodpi/figma_41845.png"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgComfyUiTempUuktk34",
+    "file": "app/src/main/res/drawable-nodpi/figma_cf32d.png"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgComfyUiTempUuktk35",
+    "file": "app/src/main/res/drawable-nodpi/figma_ec1db.png"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgFoxRed01",
+    "file": "app/src/main/res/drawable-nodpi/figma_83cd7.png"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgFoxRed04",
+    "file": "app/src/main/res/drawable-nodpi/figma_12a3e.png"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgFoxRed02",
+    "file": "app/src/main/res/drawable-nodpi/figma_65f00.png"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgFoxRed03",
+    "file": "app/src/main/res/drawable-nodpi/figma_8466b.png"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgLine4",
+    "file": "app/src/main/res/raw/figma_4b2bb.svg"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgDangerCircle",
+    "file": "app/src/main/res/raw/figma_fa4e5.svg"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgEdit1",
+    "file": "app/src/main/res/raw/figma_47e89.svg"
+  },
+  {
+    "figmaNode": "2083:578",
+    "sourceName": "imgLeftArrrow",
+    "file": "app/src/main/res/raw/figma_4a57a.svg"
+  },
+  {
+    "figmaNode": "2062:1397",
+    "sourceName": "imgSaving",
+    "file": "app/src/main/res/drawable-nodpi/figma_933ee.png"
+  },
+  {
+    "figmaNode": "2062:1397",
+    "sourceName": "imgWant",
+    "file": "app/src/main/res/drawable-nodpi/figma_f20ea.png"
+  },
+  {
+    "figmaNode": "2062:1397",
+    "sourceName": "imgNeed",
+    "file": "app/src/main/res/drawable-nodpi/figma_e8c09.png"
+  },
+  {
+    "figmaNode": "2062:1397",
+    "sourceName": "img",
+    "file": "app/src/main/res/drawable-nodpi/figma_ce1ad.png"
+  },
+  {
+    "figmaNode": "2062:1397",
+    "sourceName": "imgCoin",
+    "file": "app/src/main/res/drawable-nodpi/figma_ec083.png"
+  },
+  {
+    "figmaNode": "2062:1397",
+    "sourceName": "imgMinus",
+    "file": "app/src/main/res/raw/figma_03ea4.svg"
+  },
+  {
+    "figmaNode": "2062:1397",
+    "sourceName": "imgAdd",
+    "file": "app/src/main/res/raw/figma_ecc69.svg"
+  },
+  {
+    "figmaNode": "2062:1397",
+    "sourceName": "imgGroup1",
+    "file": "app/src/main/res/raw/figma_b2997.svg"
+  },
+  {
+    "figmaNode": "2062:1397",
+    "sourceName": "imgClose",
+    "file": "app/src/main/res/raw/figma_7b6a4.svg"
+  },
+  {
+    "figmaNode": "2062:1397",
+    "sourceName": "imgUnion",
+    "file": "app/src/main/res/raw/figma_e8316.svg"
+  },
+  {
+    "figmaNode": "2082:545",
+    "sourceName": "imgFoxRed05",
+    "file": "app/src/main/res/drawable-nodpi/figma_83cd7.png"
+  },
+  {
+    "figmaNode": "2082:545",
+    "sourceName": "imgBandana2",
+    "file": "app/src/main/res/drawable-nodpi/figma_1c2e8.png"
+  },
+  {
+    "figmaNode": "2082:545",
+    "sourceName": "imgBowTie1",
+    "file": "app/src/main/res/drawable-nodpi/figma_8466b.png"
+  },
+  {
+    "figmaNode": "2082:545",
+    "sourceName": "imgHairstyle1",
+    "file": "app/src/main/res/drawable-nodpi/figma_8af33.png"
+  },
+  {
+    "figmaNode": "2082:545",
+    "sourceName": "imgCap1",
+    "file": "app/src/main/res/drawable-nodpi/figma_d87ac.png"
+  },
+  {
+    "figmaNode": "2082:545",
+    "sourceName": "imgWhiteShirt1",
+    "file": "app/src/main/res/drawable-nodpi/figma_12a3e.png"
+  },
+  {
+    "figmaNode": "2082:545",
+    "sourceName": "imgDress1",
+    "file": "app/src/main/res/drawable-nodpi/figma_f5258.png"
+  },
+  {
+    "figmaNode": "2082:545",
+    "sourceName": "imgFoxBrown01",
+    "file": "app/src/main/res/drawable-nodpi/figma_7bf48.png"
+  },
+  {
+    "figmaNode": "2082:545",
+    "sourceName": "imgFoxGrey01",
+    "file": "app/src/main/res/drawable-nodpi/figma_26b5f.png"
+  },
+  {
+    "figmaNode": "2082:545",
+    "sourceName": "imgWhiteShirtIcon1",
+    "file": "app/src/main/res/drawable-nodpi/figma_e453d.png"
+  },
+  {
+    "figmaNode": "2082:545",
+    "sourceName": "imgBandanaIcon1",
+    "file": "app/src/main/res/drawable-nodpi/figma_67ec8.png"
+  },
+  {
+    "figmaNode": "2082:545",
+    "sourceName": "imgBowTieIcon1",
+    "file": "app/src/main/res/drawable-nodpi/figma_70f41.png"
+  },
+  {
+    "figmaNode": "2082:545",
+    "sourceName": "imgCapIcon1",
+    "file": "app/src/main/res/drawable-nodpi/figma_6917c.png"
+  },
+  {
+    "figmaNode": "2082:545",
+    "sourceName": "imgDressIcon1",
+    "file": "app/src/main/res/drawable-nodpi/figma_04405.png"
+  },
+  {
+    "figmaNode": "2082:545",
+    "sourceName": "imgHairstyleIcon1",
+    "file": "app/src/main/res/drawable-nodpi/figma_79b75.png"
+  }
+]

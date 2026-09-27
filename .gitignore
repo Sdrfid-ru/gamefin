@@ -1,0 +1,38 @@
+# Gradle and Android build output
+.gradle/
+.kotlin/
+build/
+**/build/
+*.apk
+*.aab
+*.apks
+.cxx/
+.externalNativeBuild/
+
+# Local SDK, IDE and operating system settings
+local.properties
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Credentials and signing material; keep only the documented template
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+keystore.properties
+signing.properties
+
+# Local deliverables, downloaded tools and diagnostics
+/output/
+/tmp/
+*.hprof
+*.log
+__pycache__/
+*.pyc

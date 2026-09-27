@@ -1,0 +1,11 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="41.6667" height="37.5" viewBox="0 0 41.6667 37.5" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Heart 1">
+<path id="Vector" d="M38.1489 3.04315C33.286 -1.916 27.6549 0.175531 24.1681 2.38735C22.1979 3.63712 19.4687 3.63712 17.4985 2.38736C14.0117 0.175558 8.38066 -1.91594 3.51777 3.04316C-8.02601 14.8153 11.7706 37.5 20.8334 37.5C29.8962 37.5 49.6927 14.8153 38.1489 3.04315Z" fill="url(#paint0_linear_0_42)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_42" x1="20.8333" y1="4.02861e-08" x2="20.8333" y2="37.5" gradientUnits="userSpaceOnUse">
+<stop stop-color="#9DAEDA"/>
+<stop offset="1" stop-color="#6E8EE7"/>
+</linearGradient>
+</defs>
+</svg>

@@ -1,0 +1,11 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="53.3338" height="53.3338" viewBox="0 0 53.3338 53.3338" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Danger Circle">
+<path id="Union" fill-rule="evenodd" clip-rule="evenodd" d="M26.6663 0C41.3937 0 53.3335 11.9388 53.3338 26.6663C53.3338 41.3938 41.3938 53.3338 26.6663 53.3338C11.9388 53.3335 0 41.3937 0 26.6663C0.000225633 11.939 11.939 0.000226938 26.6663 0ZM19.8113 40.95C21.8892 41.937 24.2128 42.4912 26.6663 42.4913C35.5027 42.4913 42.6661 35.3277 42.6663 26.4913C42.6663 24.0374 42.1122 21.7133 41.125 19.635L19.8113 40.95ZM26.6663 10.4913C17.8299 10.4915 10.6663 17.6548 10.6663 26.4913C10.6663 29.1369 11.3131 31.6304 12.45 33.8288L34.005 12.2738C31.8065 11.1367 29.3121 10.4913 26.6663 10.4913Z" fill="url(#paint0_linear_0_117)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_117" x1="24.7467" y1="-0.815625" x2="24.7467" y2="52.5177" gradientUnits="userSpaceOnUse">
+<stop stop-color="#9DAEDA"/>
+<stop offset="1" stop-color="#6E8EE7"/>
+</linearGradient>
+</defs>
+</svg>
