@@ -11,7 +11,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import ru.findrug.app.ui.art.GameIcon
 import ru.findrug.app.ui.components.GameButton
+import ru.findrug.app.ui.components.GameText
 import ru.findrug.app.ui.components.Heading
+import ru.findrug.app.ui.components.LocalCompactPage
 import ru.findrug.app.ui.components.Page
 import ru.findrug.app.ui.components.PageSelector
 import ru.findrug.app.ui.components.Panel
@@ -48,7 +50,7 @@ internal fun ShopPage(
             }
         },
     ) {
-        Text("Баланс: ${s.coins} 🪙 · Копилка: ${s.savings} 🐷", fontWeight = FontWeight.Bold)
+        GameText("Баланс: ${s.coins} 🪙 · Копилка: ${s.savings} 🐷", fontWeight = FontWeight.Bold)
         Text(
             "Выбирай по потребности: сытость и уход — не ниже ${PeriodReport.COMFORT_LEVEL}%. На покупки доступен весь баланс.",
             fontSize = 13.sp,
@@ -78,10 +80,15 @@ internal fun ShopPage(
                 )
             }
             Panel {
-                GameIcon(product.icon, 80.dp, Modifier.align(Alignment.CenterHorizontally))
+                GameIcon(
+                    product.icon,
+                    if (LocalCompactPage.current) 112.dp else 152.dp,
+                    Modifier.align(Alignment.CenterHorizontally),
+                )
                 Heading(product.title)
                 Text(product.effect)
-                Text(if (product.need) "Важная покупка" else "Приятная покупка", color = Muted)
+                if (!LocalCompactPage.current)
+                    Text(if (product.need) "Важная покупка" else "Приятная покупка", color = Muted)
                 if (product.id in s.ownedItems)
                     Text(if (product.id == "cap") "Кепка куплена" else "Украшение в комнате")
             }

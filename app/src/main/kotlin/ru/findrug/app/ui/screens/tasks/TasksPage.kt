@@ -10,6 +10,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import ru.findrug.app.ui.components.GameButton
+import ru.findrug.app.ui.components.GameText
 import ru.findrug.app.ui.components.Heading
 import ru.findrug.app.ui.components.Page
 import ru.findrug.app.ui.components.PageSelector
@@ -42,7 +43,7 @@ internal fun TasksPage(s: ScenarioState, back: () -> Unit, start: (Int, Boolean)
             }
         },
     ) {
-        Text("Баланс: ${s.coins} 🪙", fontWeight = FontWeight.Bold)
+        GameText("Баланс: ${s.coins} 🪙", fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             FilterChip(
                 !training,

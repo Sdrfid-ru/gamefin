@@ -17,6 +17,7 @@ import ru.findrug.app.R
 import ru.findrug.app.ui.art.FigmaVector
 import ru.findrug.app.ui.art.GameIcon
 import ru.findrug.app.ui.art.TitleFont
+import ru.findrug.app.ui.components.LocalCompactPage
 import ru.findrug.app.ui.components.Panel
 import ru.findrug.app.ui.theme.Ink
 import ru.findrug.app.ui.theme.Muted
@@ -25,6 +26,7 @@ import ru.findrug.domain.*
 @Composable
 internal fun BudgetEditor(total: Int, amounts: BudgetAmounts, change: (BudgetAmounts) -> Unit) {
     val remaining = total - amounts.total
+    val compact = LocalCompactPage.current
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             GameIcon("🪙", 28.dp)
@@ -48,9 +50,9 @@ internal fun BudgetEditor(total: Int, amounts: BudgetAmounts, change: (BudgetAmo
                             listOf(Color(0xFFCCDDF8), Color(0xFFD4F7D5), Color(0xFFF8D5DF))[i],
                             RoundedCornerShape(16.dp),
                         )
-                        .padding(vertical = 8.dp, horizontal = 3.dp),
+                        .padding(vertical = if (compact) 4.dp else 8.dp, horizontal = 3.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp),
                 ) {
                     Image(
                         painterResource(

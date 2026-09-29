@@ -241,7 +241,9 @@ class ScenarioFlowTest {
         tap("Подсказка")
         tap("Понятно")
         tap("Сбросить")
-        ui.onNodeWithText("Распределено 0 / 6").assertExists()
+        listOf("category-need", "category-want").forEach { tag ->
+            ui.onNodeWithTag(tag).assertTextContains("Предметов: 0")
+        }
         ui.onNodeWithText("Проверить").assertIsNotEnabled()
         // Arrange incorrectly first, then correct an already placed item.
         (0..5).forEach { chooseCategory(it, it in setOf(2, 5)) }
@@ -297,7 +299,9 @@ class ScenarioFlowTest {
         start(planned().copy(coins = 0))
         openRecovery(0)
         ui.onNodeWithTag("category-item-2").assertDoesNotExist()
-        ui.onNodeWithText("Распределено 0 / 3").assertExists()
+        listOf("category-need", "category-want").forEach { tag ->
+            ui.onNodeWithTag(tag).assertTextContains("Предметов: 0")
+        }
         listOf(0, 1, 5).forEach { chooseCategory(it, it != 0) }
         tap("Проверить")
         tap("Получить награду")

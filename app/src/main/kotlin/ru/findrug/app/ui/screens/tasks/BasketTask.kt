@@ -10,7 +10,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import ru.findrug.app.ui.art.GameIcon
 import ru.findrug.app.ui.components.GameButton
+import ru.findrug.app.ui.components.GameText
 import ru.findrug.app.ui.components.Page
 import ru.findrug.app.ui.components.Panel
 import ru.findrug.domain.*
@@ -37,10 +39,12 @@ internal fun BasketTask(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Checkbox(item.id in selected, { toggle(item.id) })
-                    Text("${item.icon} ${item.title} — ${item.price}")
+                    GameIcon(item.icon, 40.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("${item.title} — ${item.price}", Modifier.weight(1f))
                 }
             }
-            Text(
+            GameText(
                 "Корзина: ${exercise.items.filter { it.id in selected }.sumOf { it.price }} / ${exercise.total} 🪙",
                 fontWeight = FontWeight.Bold,
             )

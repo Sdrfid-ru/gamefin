@@ -6,10 +6,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
@@ -71,7 +73,13 @@ private val pictures =
         "🛒" to R.drawable.figma_43524,
         "🎁" to R.drawable.figma_0d0bf,
         "🪙" to R.drawable.figma_ec083,
-        "🚲" to R.drawable.figma_8be7a,
+        "🚲" to R.drawable.item_bicycle,
+        "🏀" to R.drawable.item_basketball,
+        "⚽" to R.drawable.item_ball,
+        "🧴" to R.drawable.item_soap,
+        "💧" to R.drawable.item_water,
+        "🧸" to R.drawable.item_toy,
+        "🧢" to R.drawable.item_cap,
     )
 private val vectors =
     mapOf(
@@ -88,7 +96,7 @@ private val vectors =
 @Composable
 internal fun GameIcon(symbol: String, dimension: Dp, modifier: Modifier = Modifier) {
     pictures[symbol]?.let {
-        Image(painterResource(it), null, modifier.size(dimension))
+        Image(painterResource(it), null, modifier.size(dimension), contentScale = ContentScale.Fit)
         return
     }
     vectors[symbol]?.let {
@@ -98,22 +106,35 @@ internal fun GameIcon(symbol: String, dimension: Dp, modifier: Modifier = Modifi
         )
         return
     }
-    val cell = mapOf("🏡" to 10, "🔭" to 11)[symbol]
-    if (cell == null) {
-        Text(symbol, modifier, fontSize = dimension.value.sp)
+    // The illustrations cross the atlas's nominal row boundaries, especially the telescope lens.
+    val source =
+        when (symbol) {
+            "🏡" -> IntRect(724, 710, 1086, 1040)
+            "🔭" -> IntRect(1086, 700, 1448, 1040)
+            else -> null
+        }
+    if (source == null) {
+        Box(modifier.size(dimension), contentAlignment = Alignment.Center) {
+            Text(symbol, fontSize = (dimension.value * .75f).sp)
+        }
         return
     }
     val resources = LocalContext.current.resources
     val atlas =
         remember(resources) { ImageBitmap.imageResource(resources, R.drawable.reference_icons) }
     Canvas(modifier.size(dimension)) {
-        val w = atlas.width / 4
-        val h = atlas.height / 3
+        val factor = minOf(size.width / source.width, size.height / source.height)
+        val destination = IntSize((source.width * factor).toInt(), (source.height * factor).toInt())
         drawImage(
             atlas,
-            srcOffset = IntOffset((cell % 4) * w, (cell / 4) * h),
-            srcSize = IntSize(w, h),
-            dstSize = IntSize(size.width.toInt(), size.height.toInt()),
+            srcOffset = source.topLeft,
+            srcSize = source.size,
+            dstOffset =
+                IntOffset(
+                    (size.width.toInt() - destination.width) / 2,
+                    (size.height.toInt() - destination.height) / 2,
+                ),
+            dstSize = destination,
             filterQuality = FilterQuality.High,
         )
     }
