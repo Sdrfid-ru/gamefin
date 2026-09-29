@@ -30,60 +30,70 @@ Android-игра о финансовой грамотности для дете�
 | `scripts/` | Генерация локальных звуковых ресурсов |
 
 [Карта кода](docs/code-map.md) · [Архитектура](docs/architecture.md) · [Добавление контента](docs/content-model.md)
-· [Правила работы с репозиторием](CONTRIBUTING.md)
 
-## Запуск Android
+## Локальный запуск Android
 
-Нужны JDK 17 и Android SDK. Используйте Gradle Wrapper из репозитория.
-`compileSdk` — 37, `targetSdk` — 36. Для совпадения с окружением сборки и CI установите:
+Для запуска игры достаточно Android-приложения: сервер, Docker и файл `.env` не нужны.
+Все команды ниже выполняются из корня проекта — папки с `settings.gradle.kts` и `gradlew`.
 
-```sh
-sdkmanager "platforms;android-37.0" "platforms;android-37.2" "build-tools;36.0.0" "platform-tools"
+### Что установить
+
+- **JDK 17** — требуется для модулей `core/domain` и `backend`.
+- **Android Studio** с Android SDK и SDK Command-line Tools.
+- В SDK Manager: **Android SDK Platform 37** (`platforms;android-37.0`),
+  **Build-Tools 36.0.0** и **Platform-Tools**.
+- Для запуска — эмулятор либо Android-устройство с Android 8.0 (API 26) или новее.
+
+Проект использует `compileSdk = 37`, `targetSdk = 36`. Gradle устанавливается автоматически
+через Wrapper из репозитория. Для первой сборки нужен интернет для загрузки зависимостей;
+сама игра работает офлайн.
+
+### Через Android Studio
+
+1. Откройте корневую папку проекта и дождитесь Gradle Sync.
+2. Укажите установленный JDK 17 в настройках Gradle JDK. Если используете встроенный JDK 21,
+   дополнительно установите JDK 17 для Gradle toolchain.
+3. В Device Manager создайте и запустите эмулятор. Для UI-тестов проверен Android 16 (API 36).
+   Вместо эмулятора можно подключить телефон, включить отладку по USB и разрешить подключение.
+4. Выберите модуль `app`, нужное устройство и нажмите **Run**.
+
+### Через терминал Windows (PowerShell)
+
+Укажите свои пути к JDK и SDK; `C:\path\to\jdk-17` ниже — пример, который нужно заменить:
+
+```powershell
+$env:JAVA_HOME = 'C:\path\to\jdk-17'
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+
+.\gradlew.bat :app:assembleDebug
 ```
 
-Укажите путь к SDK через `ANDROID_HOME` или `sdk.dir` в локальном `local.properties`.
-Android Studio может создать этот файл автоматически. Укажите JDK 17 через `JAVA_HOME`.
+После запуска эмулятора или подключения телефона установите и откройте приложение:
+
+```powershell
+& "$env:ANDROID_HOME\platform-tools\adb.exe" devices
+.\gradlew.bat :app:installDebug
+& "$env:ANDROID_HOME\platform-tools\adb.exe" shell am start -n ru.findrug.app/.MainActivity
+```
+
+Устройство должно отображаться в списке `adb devices` со статусом `device`.
+Для этих команд оставьте подключённым одно устройство или один эмулятор.
+
+### Через терминал macOS / Linux (bash/zsh)
+
+Укажите реальные пути к установленным JDK 17 и Android SDK:
 
 ```sh
+export JAVA_HOME="/path/to/jdk-17"
+export ANDROID_HOME="/path/to/Android/Sdk"
+chmod +x gradlew
 ./gradlew :app:assembleDebug
+
+# Запустите эмулятор или подключите телефон.
+"$ANDROID_HOME/platform-tools/adb" devices
+./gradlew :app:installDebug
+"$ANDROID_HOME/platform-tools/adb" shell am start -n ru.findrug.app/.MainActivity
 ```
-
-APK появится в `app/build/outputs/apk/debug/app-debug.apk`. Для установки на подключённый
-эмулятор или устройство используйте `./gradlew :app:installDebug`.
-Готовые APK и материалы из локальной папки `output/` в Git не входят. Ссылки на них в старых
-отчётах обозначают локальные результаты; после клонирования APK нужно собрать.
-
-## Проверки
-
-```sh
-./gradlew checkKotlinFormat
-./gradlew :core:domain:test :app:testDebugUnitTest :backend:test
-./gradlew :app:lintDebug
-./gradlew :app:connectedDebugAndroidTest # нужен эмулятор или устройство
-```
-
-Для форматирования выполните `./gradlew formatKotlin`, затем отдельно `./gradlew checkKotlinFormat`.
-CI проверяет формат, тесты, Android lint и сборку. По тегу `v*` создаётся debug APK как артефакт
-GitHub Actions. Релизная подпись и публикация в магазин не настроены.
-
-## Отдельный backend
-
-Для работы с PostgreSQL нужны Docker и PostgreSQL 16. Скопируйте `.env.example` в `.env`,
-задайте локальные пароли, затем запустите базу и сервер. Пример для bash/zsh:
-
-```sh
-cp .env.example .env
-# Отредактируйте .env до запуска; не добавляйте его в Git.
-docker compose up -d postgres
-set -a
-. ./.env
-set +a
-./gradlew :backend:run
-```
-
-Файл `.env` содержит локальные shell-совместимые присваивания; значения с пробелами заключайте
-в кавычки. Backend использует `DATABASE_URL`, `DATABASE_USER` и `DATABASE_PASSWORD` для базы
-и миграций. Подробнее: [API](docs/api.md), [модель данных](docs/database.md).
 
 ## Ресурсы
 

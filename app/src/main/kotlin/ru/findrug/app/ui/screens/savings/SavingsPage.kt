@@ -12,7 +12,9 @@ import androidx.compose.ui.unit.*
 import ru.findrug.app.ui.art.GameIcon
 import ru.findrug.app.ui.components.AmountControl
 import ru.findrug.app.ui.components.GameButton
+import ru.findrug.app.ui.components.GameText
 import ru.findrug.app.ui.components.Heading
+import ru.findrug.app.ui.components.LocalCompactPage
 import ru.findrug.app.ui.components.Meter
 import ru.findrug.app.ui.components.Page
 import ru.findrug.app.ui.components.PageSelector
@@ -57,17 +59,24 @@ internal fun SavingsPage(
             }
         },
     ) {
-        Text("Баланс: ${s.coins} 🪙 · Накопления: ${s.savings} 🐷", fontWeight = FontWeight.Bold)
+        GameText(
+            "Баланс: ${s.coins} 🪙 · Накопления: ${s.savings} 🐷",
+            fontWeight = FontWeight.Bold,
+        )
         Panel {
             if (selecting) {
-                GameIcon(goal.icon, 60.dp, Modifier.align(Alignment.CenterHorizontally))
+                GameIcon(
+                    goal.icon,
+                    if (LocalCompactPage.current) 112.dp else 152.dp,
+                    Modifier.align(Alignment.CenterHorizontally),
+                )
                 Heading(goal.title)
             } else {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    GameIcon(goal.icon, 40.dp)
+                    GameIcon(goal.icon, 64.dp)
                     Column(Modifier.weight(1f)) { Heading(goal.title) }
                 }
             }

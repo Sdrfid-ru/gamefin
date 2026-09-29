@@ -32,7 +32,7 @@ internal fun CollectionPage(s: ScenarioState, back: () -> Unit, nextGoal: () -> 
             val entry = entries[page.coerceIn(entries.indices)]
             val goal = ScenarioContent.goals.find { it.id == entry.key }
             Panel {
-                GameIcon(goal?.icon ?: "🎯", 90.dp, Modifier.align(Alignment.CenterHorizontally))
+                GameIcon(goal?.icon ?: "🎯", 144.dp, Modifier.align(Alignment.CenterHorizontally))
                 Heading(goal?.title ?: "Прежняя мечта")
                 Text("Получено: ${entry.value}. Это результат твоих накоплений!")
             }

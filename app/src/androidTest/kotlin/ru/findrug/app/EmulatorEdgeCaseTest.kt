@@ -150,7 +150,7 @@ class EmulatorEdgeCaseTest {
             5 -> {
                 tap("🧸 Игрушка — 60")
                 tap("Проверить")
-                tap("🥣 Корм — 40")
+                tap("Корм — 40")
                 tap("Проверить")
             }
         }

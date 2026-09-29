@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import ru.findrug.app.navigation.GameRoute
 import ru.findrug.app.ui.art.GameIcon
+import ru.findrug.app.ui.components.GameText
 import ru.findrug.app.ui.components.Meter
 import ru.findrug.app.ui.components.RoundButton
 import ru.findrug.app.ui.components.SideAction
@@ -254,7 +255,7 @@ internal fun Home(s: ScenarioState, navigate: (GameRoute) -> Unit, finish: () ->
                         fontWeight = FontWeight.Bold,
                     )
                 }
-                Text(
+                GameText(
                     if (s.periodClosed) "›"
                     else if (recovery) "Помощь ›"
                     else if (taskReward > 0) "+$taskReward 🪙 ›" else "Практика ›",

@@ -158,6 +158,7 @@ class PhoneLayoutTest {
         repeat(3) {
             fits("goal $it")
             action("Выбрать цель")
+            shot("goal-$it")
             if (it < 2) next()
         }
         shot("03-goals")
@@ -176,6 +177,7 @@ class PhoneLayoutTest {
             ui.onNodeWithTag("task-$id").performClick()
             fits("exercise $id")
             if (id == 0) {
+                shot("sort-unassigned")
                 for (item in 0..5) {
                     ui.onNodeWithTag("category-item-$item").assertIsDisplayed().performClick()
                     ui.onNodeWithTag("category-want").assertIsDisplayed().performClick()

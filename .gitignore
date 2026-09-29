@@ -36,3 +36,9 @@ signing.properties
 *.log
 __pycache__/
 *.pyc
+
+# Keep only resource documentation and licenses in Git.
+/docs/*
+!/docs/assets.md
+!/docs/pet-motion-audio-v5.md
+!/docs/licenses/

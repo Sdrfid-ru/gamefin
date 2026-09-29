@@ -22,6 +22,7 @@ import androidx.compose.ui.zIndex
 import ru.findrug.app.ui.art.GameIcon
 import ru.findrug.app.ui.art.TitleFont
 import ru.findrug.app.ui.components.GameButton
+import ru.findrug.app.ui.components.LocalCompactPage
 import ru.findrug.app.ui.components.Page
 import ru.findrug.app.ui.components.Panel
 import ru.findrug.app.ui.theme.Cream
@@ -39,6 +40,7 @@ internal fun CategoryTask(
     fun position(id: Int) = items.indexOfFirst { it.id == id }
     var layout by rememberSaveable { mutableStateOf("-".repeat(items.size)) }
     var selected by rememberSaveable { mutableIntStateOf(-1) }
+    var draggedId by remember { mutableIntStateOf(-1) }
     var feedback by rememberSaveable {
         mutableStateOf("Перетащи предметы. Можно нажать предмет, затем категорию.")
     }
@@ -85,77 +87,85 @@ internal fun CategoryTask(
         },
     ) {
         Panel { Text(feedback, fontSize = 13.sp) }
-        Row(
-            Modifier.fillMaxWidth().heightIn(min = 80.dp),
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
-        ) {
-            items.forEach { item ->
-                val id = item.id
-                var origin by remember { mutableStateOf(Offset.Zero) }
-                var drag by remember { mutableStateOf(Offset.Zero) }
-                var point by remember { mutableStateOf(Offset.Zero) }
-                Column(
-                    Modifier.weight(1f)
-                        .testTag("category-item-$id")
-                        .zIndex(if (drag != Offset.Zero) 5f else 0f)
-                        .onGloballyPositioned { origin = it.positionInRoot() }
-                        .graphicsLayer {
-                            translationX = drag.x
-                            translationY = drag.y
-                        }
-                        .background(
-                            if (selected == id) Color(0xFFFFDE8E) else Cream,
-                            RoundedCornerShape(12.dp),
-                        )
-                        .border(
-                            if (id in wrong) 2.dp else 0.dp,
-                            if (id in wrong) Color(0xFFB04438) else Color.Transparent,
-                            RoundedCornerShape(12.dp),
-                        )
-                        .semantics {
-                            contentDescription =
-                                "${item.title}: ${when(layout[position(id)]) { 'n' -> "Нужно"
+        val compact = LocalCompactPage.current
+        items.chunked(3).forEach { row ->
+            Row(
+                Modifier.fillMaxWidth().zIndex(if (row.any { it.id == draggedId }) 5f else 0f),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                row.forEach { item ->
+                    val id = item.id
+                    var origin by remember { mutableStateOf(Offset.Zero) }
+                    var drag by remember { mutableStateOf(Offset.Zero) }
+                    var point by remember { mutableStateOf(Offset.Zero) }
+                    Column(
+                        Modifier.weight(1f)
+                            .testTag("category-item-$id")
+                            .zIndex(if (drag != Offset.Zero) 5f else 0f)
+                            .onGloballyPositioned { origin = it.positionInRoot() }
+                            .graphicsLayer {
+                                translationX = drag.x
+                                translationY = drag.y
+                            }
+                            .background(
+                                if (selected == id) Color(0xFFFFDE8E) else Cream,
+                                RoundedCornerShape(12.dp),
+                            )
+                            .border(
+                                if (id in wrong) 2.dp else 0.dp,
+                                if (id in wrong) Color(0xFFB04438) else Color.Transparent,
+                                RoundedCornerShape(12.dp),
+                            )
+                            .semantics {
+                                contentDescription =
+                                    "${item.title}: ${when(layout[position(id)]) { 'n' -> "Нужно"
  'w' -> "Хочу"
  else -> "не распределено" }}${if(id in wrong) ", проверь выбор" else ""}"
-                        }
-                        .clickable { selected = id }
-                        .pointerInput(id, needBounds, wantBounds) {
-                            detectDragGestures(
-                                onDragStart = { offset ->
-                                    point = origin + offset
-                                    selected = id
-                                },
-                                onDrag = { change, delta ->
-                                    change.consume()
-                                    drag += delta
-                                    point += delta
-                                },
-                                onDragEnd = {
-                                    when {
-                                        needBounds.contains(point) -> place(id, true)
-                                        wantBounds.contains(point) -> place(id, false)
-                                    }
-                                    drag = Offset.Zero
-                                },
-                                onDragCancel = { drag = Offset.Zero },
-                            )
-                        }
-                        .padding(vertical = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    GameIcon(item.icon, 28.dp)
-                    Text(item.title, fontSize = 8.sp, maxLines = 1, color = Ink)
-                    Text(
-                        when (layout[position(id)]) {
-                            'n' -> "Нужно"
-                            'w' -> "Хочу"
-                            else -> "—"
-                        },
-                        fontSize = 9.sp,
-                        color = Ink,
-                    )
-                    if (id in wrong) Text("Проверь", fontSize = 8.sp, color = Color(0xFFB04438))
+                            }
+                            .clickable { selected = id }
+                            .pointerInput(id, needBounds, wantBounds) {
+                                detectDragGestures(
+                                    onDragStart = { offset ->
+                                        point = origin + offset
+                                        selected = id
+                                        draggedId = id
+                                    },
+                                    onDrag = { change, delta ->
+                                        change.consume()
+                                        drag += delta
+                                        point += delta
+                                    },
+                                    onDragEnd = {
+                                        when {
+                                            needBounds.contains(point) -> place(id, true)
+                                            wantBounds.contains(point) -> place(id, false)
+                                        }
+                                        drag = Offset.Zero
+                                        draggedId = -1
+                                    },
+                                    onDragCancel = {
+                                        drag = Offset.Zero
+                                        draggedId = -1
+                                    },
+                                )
+                            }
+                            .padding(vertical = if (compact) 3.dp else 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        GameIcon(item.icon, if (compact) 44.dp else 64.dp)
+                        Text(item.title, fontSize = 12.sp, maxLines = 2, color = Ink)
+                        Text(
+                            when (layout[position(id)]) {
+                                'n' -> "Нужно"
+                                'w' -> "Хочу"
+                                else -> "—"
+                            },
+                            fontSize = 9.sp,
+                            color = Ink,
+                        )
+                    }
                 }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -164,7 +174,7 @@ internal fun CategoryTask(
                 Column(
                     Modifier.weight(1f)
                         .testTag(if (need) "category-need" else "category-want")
-                        .heightIn(min = 130.dp)
+                        .heightIn(min = if (compact) 64.dp else 130.dp)
                         .onGloballyPositioned {
                             if (need) needBounds = it.boundsInRoot()
                             else wantBounds = it.boundsInRoot()
@@ -179,40 +189,45 @@ internal fun CategoryTask(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(if (need) "Нужно" else "Хочу", fontFamily = TitleFont, fontSize = 18.sp)
-                    items
-                        .filter { layout[position(it.id)] == category }
-                        .chunked(2)
-                        .forEach { pair ->
-                            Row(Modifier.fillMaxWidth()) {
-                                pair.forEach { item ->
-                                    Column(
-                                        Modifier.weight(1f)
-                                            .heightIn(min = 40.dp)
-                                            .clickable {
-                                                if (selected >= 0) place(selected, need)
-                                                else selected = item.id
-                                            }
-                                            .padding(vertical = 3.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                    ) {
-                                        Text(
-                                            "${item.icon}${if(item.id in wrong) " !" else ""}",
-                                            fontSize = 18.sp,
-                                        )
-                                        Text(
-                                            item.title,
-                                            fontSize = 9.sp,
-                                            color = if (item.id in wrong) Color(0xFFB04438) else Ink,
-                                        )
+                    if (compact) {
+                        Text(
+                            "Предметов: ${items.count { layout[position(it.id)] == category }}",
+                            fontSize = 12.sp,
+                        )
+                    } else
+                        items
+                            .filter { layout[position(it.id)] == category }
+                            .chunked(2)
+                            .forEach { pair ->
+                                Row(Modifier.fillMaxWidth()) {
+                                    pair.forEach { item ->
+                                        Column(
+                                            Modifier.weight(1f)
+                                                .heightIn(min = if (compact) 20.dp else 52.dp)
+                                                .clickable {
+                                                    if (selected >= 0) place(selected, need)
+                                                    else selected = item.id
+                                                }
+                                                .padding(vertical = 2.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                        ) {
+                                            if (!compact) GameIcon(item.icon, 32.dp)
+                                            Text(
+                                                "${item.title}${if (item.id in wrong) " !" else ""}",
+                                                fontSize = 11.sp,
+                                                color =
+                                                    if (item.id in wrong) Color(0xFFB04438) else Ink,
+                                            )
+                                        }
                                     }
+                                    if (pair.size == 1) Spacer(Modifier.weight(1f))
                                 }
-                                if (pair.size == 1) Spacer(Modifier.weight(1f))
                             }
-                        }
                 }
             }
         }
-        Text("Распределено $placed / ${items.size}", fontWeight = FontWeight.Bold, color = Ink)
+        if (!compact)
+            Text("Распределено $placed / ${items.size}", fontWeight = FontWeight.Bold, color = Ink)
     }
     if (showHint)
         AlertDialog(

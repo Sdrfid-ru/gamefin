@@ -100,7 +100,7 @@ internal fun GameButton(
             Modifier.matchParentSize(),
             stretch = true,
         )
-        Text(
+        GameText(
             label,
             Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
             fontFamily = TitleFont,

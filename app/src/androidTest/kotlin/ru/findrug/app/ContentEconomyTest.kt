@@ -246,7 +246,7 @@ class ContentEconomyTest {
         tap("Цена 60")
         ui.onNodeWithText("Есть дешевле").assertIsDisplayed()
         tap("Цена 40")
-        tap("🥣 Обед — 25")
+        tap("Обед — 25")
         tap("Проверить")
         ui.runOnIdle {
             assertEquals(listOf("Верно", "Осталось 30", "Выгоднее", "Осталось 45"), results)

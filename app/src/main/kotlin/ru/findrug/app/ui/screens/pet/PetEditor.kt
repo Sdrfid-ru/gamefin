@@ -20,6 +20,7 @@ import ru.findrug.app.R
 import ru.findrug.app.ui.LocalGameState
 import ru.findrug.app.ui.art.FigmaVector
 import ru.findrug.app.ui.components.GameButton
+import ru.findrug.app.ui.components.GameText
 import ru.findrug.app.ui.components.Heading
 import ru.findrug.app.ui.components.Page
 import ru.findrug.app.ui.components.PageSelector
@@ -118,7 +119,7 @@ internal fun PetEditor(
                                     )
                                 1 -> listOf(null, R.drawable.figma_e453d, R.drawable.figma_04405)
                                 2 -> listOf(R.drawable.figma_67ec8, R.drawable.figma_70f41, null)
-                                else -> listOf(null, R.drawable.figma_6917c, R.drawable.figma_79b75)
+                                else -> listOf(null, R.drawable.item_cap, R.drawable.figma_79b75)
                             }
                         val selected =
                             when (tab) {
@@ -157,7 +158,7 @@ internal fun PetEditor(
                                 if (icons[i] != null)
                                     Image(painterResource(icons[i]!!), null, Modifier.size(48.dp))
                                 else FigmaVector(R.raw.figma_fa4e5, Modifier.size(48.dp))
-                                Text(
+                                GameText(
                                     if (locked) "Кепка · 70 🪙" else label,
                                     fontSize = 9.sp,
                                     textAlign = TextAlign.Center,
