@@ -122,7 +122,7 @@ object ScenarioGame {
     }
 
     // Перевод уменьшает доступный баланс, но сохраняет деньги в отдельной копилке.
-    // actual.save — сумма переводов за период, а savings — накопления между периодами.
+    // actual.save — пополнения минус снятия за период, а savings — текущие накопления.
     fun deposit(s: ScenarioState, amount: Int): ScenarioState {
         canAct(s)
         val goal = s.goal ?: throw ScenarioRule("Сначала выбери цель")
@@ -134,6 +134,21 @@ object ScenarioGame {
             planLocked = true,
             actual = s.actual.copy(save = s.actual.save + amount),
             history = s.history + CoinEntry("В копилку: ${goal.title}", -amount, s.period),
+        )
+    }
+
+    /** Возврат денег на баланс не создаёт доход и уменьшает факт накоплений за период. */
+    fun withdraw(s: ScenarioState, amount: Int): ScenarioState {
+        canAct(s)
+        check(amount > 0 && amount <= s.savings, "Сейчас можно забрать от 1 до ${s.savings} монет")
+        check(s.coins.toLong() + amount <= Int.MAX_VALUE, "Эта сумма не помещается на балансе")
+        check(s.actual.save.toLong() - amount >= Int.MIN_VALUE, "Сумма снятия слишком велика")
+        return s.copy(
+            coins = s.coins + amount,
+            savings = s.savings - amount,
+            planLocked = true,
+            actual = s.actual.copy(save = s.actual.save - amount),
+            history = s.history + CoinEntry("Из копилки", amount, s.period),
         )
     }
 
@@ -246,6 +261,8 @@ object ScenarioGame {
                     "Уход сейчас ${report.care}%. В следующем плане сначала выдели деньги на средство ухода или гигиену: цель — не ниже ${PeriodReport.COMFORT_LEVEL}%."
                 !report.needsProvided ->
                     "В следующем периоде сначала выдели 40 монет на корм для лисёнка, а затем планируй желания."
+                report.actual.save < 0 ->
+                    "Из копилки забрано на ${-report.actual.save.toLong()} монет больше, чем внесено. В следующем плане оставь деньги на текущие покупки и посильное пополнение копилки."
                 !report.hasSavings ->
                     "В следующем периоде попробуй отложить первые 10 монет на цель перед покупкой желаемого."
                 report.responsibleAdjustment ->

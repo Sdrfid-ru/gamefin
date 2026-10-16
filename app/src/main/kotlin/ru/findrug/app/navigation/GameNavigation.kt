@@ -75,6 +75,7 @@ internal fun GameNavigation(state: GameUiState, model: GameViewModel) {
                 { model.navigate(Screen.BUDGET) },
                 model::requestCollection,
                 model::requestDeposit,
+                model::requestWithdrawal,
             )
         Screen.RESULT -> ResultPage(game, home, model::nextPeriod)
         Screen.PROGRESS -> ProgressPage(game, home) { model.navigate(it, click = true) }

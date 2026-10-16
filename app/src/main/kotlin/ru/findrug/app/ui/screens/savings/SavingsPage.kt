@@ -1,5 +1,6 @@
 package ru.findrug.app.ui.screens.savings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,10 +30,27 @@ internal fun SavingsPage(
     plan: () -> Unit,
     collect: (ScenarioGoal) -> Unit,
     deposit: (Int) -> Unit,
+    withdraw: (Int) -> Unit,
 ) {
     var amount by rememberSaveable { mutableIntStateOf(30) }
     var choosing by rememberSaveable { mutableStateOf(s.goal == null) }
     var page by rememberSaveable { mutableIntStateOf(0) }
+    var withdrawing by rememberSaveable { mutableStateOf(false) }
+    if (withdrawing) {
+        BackHandler { withdrawing = false }
+        WithdrawalPage(s, { withdrawing = false }, plan, withdraw)
+        return
+    }
+    val withdrawalButton: @Composable RowScope.() -> Unit = {
+        GameButton(
+            "Забрать монеты",
+            secondary = true,
+            enabled = s.savings > 0 && !s.periodClosed,
+            modifier = Modifier.weight(1f).testTag("savings-withdraw-open"),
+        ) {
+            withdrawing = true
+        }
+    }
     val selecting = choosing || s.goal == null
     val goal =
         if (selecting) s.availableGoals[page.coerceIn(s.availableGoals.indices)] else s.goal!!
@@ -47,7 +65,13 @@ internal fun SavingsPage(
                     select(goal.id)
                     choosing = false
                 }
-                if (s.goal != null) GameButton("К моей цели", true) { choosing = false }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (s.goal != null)
+                        GameButton("К моей цели", true, modifier = Modifier.weight(1f)) {
+                            choosing = false
+                        }
+                    withdrawalButton()
+                }
             } else {
                 if (s.savings >= goal.price) GameButton("Получить цель") { collect(goal) }
                 else if (s.plan == null) GameButton("Сначала составь план", onClick = plan)
@@ -55,7 +79,12 @@ internal fun SavingsPage(
                     GameButton("Отложить $amount монет", enabled = amount in 1..maximum) {
                         deposit(amount)
                     }
-                GameButton("Изменить цель", true) { choosing = true }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GameButton("Изменить цель", true, modifier = Modifier.weight(1f)) {
+                        choosing = true
+                    }
+                    withdrawalButton()
+                }
             }
         },
     ) {
@@ -105,9 +134,64 @@ internal fun SavingsPage(
                         if (maximum > 0)
                             TextButton(onClick = { amount = maximum }) { Text("Отложить $maximum") }
                     }
-                } else if (s.periodClosed) Text("Чтобы снова откладывать, начни следующий период.")
+                } else if (s.periodClosed)
+                    Text("Чтобы пополнять копилку и забирать монеты, начни следующий период.")
             }
         }
         if (selecting) Text("Копилка хранится отдельно от монет на покупки.", fontSize = 13.sp)
+    }
+}
+
+@Composable
+private fun WithdrawalPage(
+    s: ScenarioState,
+    back: () -> Unit,
+    plan: () -> Unit,
+    withdraw: (Int) -> Unit,
+) {
+    var amount by rememberSaveable { mutableIntStateOf(minOf(30, s.savings)) }
+    val selected = amount.coerceIn(0, s.savings)
+    val canWithdraw = s.started && !s.periodClosed && s.plan != null && s.savings > 0
+    Page(
+        "Забрать из копилки",
+        back,
+        actions = {
+            if (s.plan == null && !s.periodClosed)
+                GameButton("Сначала составь план", onClick = plan)
+            else {
+                GameButton(
+                    "Забрать $selected монет",
+                    enabled = canWithdraw && selected > 0,
+                    modifier = Modifier.testTag("withdrawal-submit"),
+                ) {
+                    withdraw(selected)
+                }
+                GameButton(
+                    "Забрать всё",
+                    secondary = true,
+                    enabled = canWithdraw,
+                    modifier = Modifier.testTag("withdrawal-all"),
+                ) {
+                    withdraw(s.savings)
+                }
+            }
+        },
+    ) {
+        GameText("На покупки: ${s.coins} монет", fontWeight = FontWeight.Bold)
+        Panel {
+            Heading("В копилке: ${s.savings} монет")
+            if (s.savings == 0) Text("Копилка пуста. Все монеты уже на балансе.")
+            else {
+                AmountControl("Забрать", selected) { amount = it.coerceIn(0, s.savings) }
+                Text("На балансе станет: ${s.coins.toLong() + selected} монет.")
+                Text("В копилке останется: ${s.savings - selected} монет.")
+                Text(
+                    "Монеты можно будет потратить. Накоплений станет меньше, а до мечты — дальше.",
+                    fontSize = 13.sp,
+                )
+            }
+        }
+        if (s.periodClosed) Text("Чтобы забрать монеты, начни следующий период.")
+        else if (s.plan == null) Text("Сначала составь план бюджета на этот период.")
     }
 }

@@ -127,6 +127,11 @@ internal fun BudgetTable(plan: BudgetAmounts, actual: BudgetAmounts) {
                 }
             }
         }
+    if (actual.save < 0)
+        Text(
+            "Минус в «Коплю»: за период ты забрал из копилки больше, чем отложил.",
+            fontSize = 12.sp,
+        )
 }
 
 internal val BudgetSaver =

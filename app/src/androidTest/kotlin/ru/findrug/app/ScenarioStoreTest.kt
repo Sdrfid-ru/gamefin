@@ -69,6 +69,29 @@ class ScenarioStoreTest {
     }
 
     @Test
+    fun withdrawalAndNegativePeriodSavingsSurviveRestartAndDemoSwitch() {
+        val initial =
+            ScenarioGame.plan(
+                    ScenarioGame.start(ScenarioState(profile = ScenarioProfile("Игрок"))),
+                    BudgetAmounts(40, 70, 90),
+                )
+                .copy(savings = 85)
+        val withdrawn = ScenarioGame.withdraw(initial, 35)
+        store().save(withdrawn)
+        val restored = store().read()
+        assertEquals(withdrawn, restored)
+        assertEquals(235, restored.coins)
+        assertEquals(50, restored.savings)
+        assertEquals(-35, restored.actual.save)
+        assertFalse(restored.planEditable)
+        assertEquals(CoinEntry("Из копилки", 35, 1), restored.history.last())
+        assertNull(restored.goalId)
+        store().enterDemo()
+        assertEquals(withdrawn, store().exitDemo())
+        assertEquals(withdrawn, store().read())
+    }
+
+    @Test
     fun demoResetAndExitPreserveNormalGame() = runBlocking {
         val regular =
             ScenarioGame.start(ScenarioState(profile = ScenarioProfile("Игрок", "Лис")))

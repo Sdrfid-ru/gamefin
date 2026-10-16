@@ -25,6 +25,8 @@ internal sealed interface ConfirmedAction {
 
     data class Deposit(val amount: Int) : ConfirmedAction
 
+    data class Withdraw(val amount: Int) : ConfirmedAction
+
     data class Collect(val goalId: String) : ConfirmedAction
 
     data object ResetDemo : ConfirmedAction

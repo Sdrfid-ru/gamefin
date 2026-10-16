@@ -34,6 +34,9 @@ class GameViewModelTest {
             BudgetAmounts(80, 60, 60),
         )
 
+    private fun withSavings() =
+        ScenarioGame.deposit(ScenarioGame.selectGoal(planned(), "house"), 60)
+
     private fun model(repository: FakeRepository, saved: SavedStateHandle = SavedStateHandle()) =
         GameViewModel(repository, saved)
 
@@ -119,6 +122,135 @@ class GameViewModelTest {
             assertEquals(0, repository.writes)
             assertEquals(planned(), model.state.value.game)
             assertNotNull(model.state.value.error)
+            assertFalse(model.state.value.busy)
+        }
+
+    @Test
+    fun withdrawalPreviewAndCancellationNeverChangeOrPersistBalances() =
+        runTest(dispatcher) {
+            val initial = withSavings()
+            val repository = FakeRepository(initial)
+            val model = model(repository)
+            runCurrent()
+            model.requestWithdrawal(20)
+            val confirmation = model.state.value.confirmation!!
+            assertEquals(ConfirmedAction.Withdraw(20), confirmation.action)
+            assertTrue(confirmation.message.contains("баланс для покупок: 160"))
+            assertTrue(confirmation.message.contains("останется 40 монет"))
+            assertTrue(confirmation.message.contains("прогресс к цели уменьшатся"))
+            assertEquals(initial, model.state.value.game)
+            assertEquals(0, repository.writes)
+            model.dismissConfirmation()
+            model.confirm()
+            advanceUntilIdle()
+            assertNull(model.state.value.confirmation)
+            assertEquals(initial, model.state.value.game)
+            assertEquals(initial, repository.game)
+            assertEquals(0, repository.writes)
+        }
+
+    @Test
+    fun withdrawalPersistsOnceBeforePublishingAndIgnoresRepeatedConfirmation() =
+        runTest(dispatcher) {
+            val initial = withSavings()
+            val repository = FakeRepository(initial)
+            val model = model(repository)
+            runCurrent()
+            val gate = CompletableDeferred<Unit>()
+            repository.writeGate = gate
+            model.requestWithdrawal(20)
+            model.confirm()
+            runCurrent()
+            assertTrue(model.state.value.busy)
+            assertEquals(initial, model.state.value.game)
+            assertNull(model.state.value.notice)
+            model.confirm()
+            model.requestWithdrawal(20)
+            gate.complete(Unit)
+            advanceUntilIdle()
+            model.confirm()
+            advanceUntilIdle()
+            val updated = model.state.value.game!!
+            assertEquals(160, updated.coins)
+            assertEquals(40, updated.savings)
+            assertEquals(40, updated.actual.save)
+            assertEquals(initial.history.size + 1, updated.history.size)
+            assertEquals(repository.game, updated)
+            assertEquals(1, repository.writes)
+            assertEquals("Из копилки на баланс: 20 монет", model.state.value.notice)
+            assertNull(model.state.value.confirmation)
+            assertFalse(model.state.value.busy)
+        }
+
+    @Test
+    fun failedWithdrawalWritePreservesBalancesAndCanBeRetried() =
+        runTest(dispatcher) {
+            val initial = withSavings()
+            val repository = FakeRepository(initial)
+            val model = model(repository)
+            runCurrent()
+            repository.failure = IOException("Диск недоступен")
+            model.requestWithdrawal(60)
+            model.confirm()
+            advanceUntilIdle()
+            assertEquals(initial, model.state.value.game)
+            assertEquals(initial, repository.game)
+            assertEquals(0, repository.writes)
+            assertEquals("Диск недоступен", model.state.value.error)
+            assertNull(model.state.value.notice)
+            assertFalse(model.state.value.busy)
+            repository.failure = null
+            model.dismissError()
+            model.requestWithdrawal(60)
+            model.confirm()
+            advanceUntilIdle()
+            assertEquals(200, model.state.value.game!!.coins)
+            assertEquals(0, model.state.value.game!!.savings)
+            assertEquals(repository.game, model.state.value.game)
+            assertEquals(1, repository.writes)
+            assertNull(model.state.value.error)
+        }
+
+    @Test
+    fun invalidWithdrawalDoesNotOpenConfirmationOrWrite() =
+        runTest(dispatcher) {
+            val initial = withSavings()
+            val repository = FakeRepository(initial)
+            val model = model(repository)
+            runCurrent()
+            for (amount in listOf(0, -1, 61)) {
+                model.dismissError()
+                model.requestWithdrawal(20)
+                model.requestWithdrawal(amount)
+                model.confirm()
+                advanceUntilIdle()
+                assertNotNull(model.state.value.error)
+                assertNull(model.state.value.confirmation)
+                assertEquals(initial, model.state.value.game)
+                assertEquals(0, repository.writes)
+            }
+        }
+
+    @Test
+    fun withdrawalConfirmationRevalidatesTheCurrentPeriod() =
+        runTest(dispatcher) {
+            val initial = withSavings().copy(periodTasks = 1)
+            val repository = FakeRepository(initial)
+            val model = model(repository)
+            runCurrent()
+            model.requestWithdrawal(20)
+            model.finishPeriod()
+            advanceUntilIdle()
+            val closed = model.state.value.game!!
+            assertTrue(closed.periodClosed)
+            assertEquals(1, repository.writes)
+            model.confirm()
+            advanceUntilIdle()
+            assertEquals(closed, model.state.value.game)
+            assertEquals(closed, repository.game)
+            assertEquals(1, repository.writes)
+            assertNotNull(model.state.value.error)
+            assertNull(model.state.value.confirmation)
             assertFalse(model.state.value.busy)
         }
 

@@ -137,6 +137,22 @@ internal class GameViewModel(
         )
     }
 
+    fun requestWithdrawal(amount: Int) {
+        val game = state.value.game ?: return
+        if (state.value.busy) return
+        val preview =
+            try {
+                ScenarioGame.withdraw(game, amount)
+            } catch (e: ScenarioRule) {
+                mutableState.value = state.value.copy(error = e.message, confirmation = null)
+                return
+            }
+        requestConfirmation(
+            "Забрать $amount монет из копилки?\nМонеты вернутся на баланс для покупок: ${preview.coins}.\nВ копилке останется ${preview.savings} монет. Накопления и прогресс к цели уменьшатся.",
+            ConfirmedAction.Withdraw(amount),
+        )
+    }
+
     fun requestCollection(goal: ScenarioGoal) {
         requestConfirmation(
             "Получить «${goal.title}» за ${goal.price} монет из копилки?\nБаланс покупок не изменится. Затем можно выбрать новую цель.",
@@ -174,6 +190,10 @@ internal class GameViewModel(
             is ConfirmedAction.Deposit ->
                 mutate("В копилку: ${action.amount} монет") {
                     ScenarioGame.deposit(it, action.amount)
+                }
+            is ConfirmedAction.Withdraw ->
+                mutate("Из копилки на баланс: ${action.amount} монет") {
+                    ScenarioGame.withdraw(it, action.amount)
                 }
             is ConfirmedAction.Collect -> {
                 val goal =
