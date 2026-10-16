@@ -112,6 +112,29 @@ chmod +x gradlew
 `signing.properties` и `*.jks` исключены из Git. Сохраните ключ и пароли в надёжном месте:
 для следующих обновлений установленного приложения требуется тот же ключ подписи.
 
+### Автоматическая публикация в GitHub Releases
+
+После каждого push в `main` workflow релиза выполняет проверки, собирает и проверяет подпись
+релизного APK, затем публикует APK и контрольную сумму SHA-256 в GitHub Releases.
+Сборку также можно запустить вручную через Actions → workflow релиза → Run workflow,
+выбрав ветку `main`.
+
+[Последний релиз](https://github.com/Sdrfid-ru/gamefin/releases/latest) ·
+[Скачать релизный APK](https://github.com/Sdrfid-ru/gamefin/releases/latest/download/gamefin-release.apk)
+
+Каждая сборка получает тег `build-<github run_id>` и название
+`FinDrug <version> build <run_number>`. Версия приложения берётся из `app/build.gradle.kts`;
+для обновления приложения увеличивайте `versionCode` вручную и меняйте `versionName` по необходимости.
+
+Для подписи нужны два repository secret в GitHub Actions:
+
+- `ANDROID_KEYSTORE_BASE64` — содержимое существующего `release-keystore.jks` в Base64.
+- `ANDROID_SIGNING_PROPERTIES_BASE64` — весь существующий `signing.properties` в Base64.
+
+В `signing.properties` укажите `storeFile=release-keystore.jks`. Используйте один и тот же
+ключ для локальных сборок и CI, чтобы опубликованные APK могли обновлять установленное приложение.
+Ключ и параметры подписи хранятся в Secrets и не добавляются в репозиторий.
+
 ## Ресурсы
 
 Происхождение изображений и шрифтов описано в [реестре ресурсов](docs/assets.md), сведения о звуках —
