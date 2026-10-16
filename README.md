@@ -95,6 +95,23 @@ chmod +x gradlew
 "$ANDROID_HOME/platform-tools/adb" shell am start -n ru.findrug.app/.MainActivity
 ```
 
+### Релизный APK
+
+Для подписи нужен релизный ключ. Положите `release-keystore.jks` в корень проекта,
+скопируйте `signing.properties.example` в `signing.properties` и заполните пароли и alias.
+Путь `storeFile` задаётся относительно корня проекта; в Windows используйте `/` в пути.
+
+```powershell
+.\gradlew.bat :app:assembleRelease
+```
+
+На macOS / Linux: `./gradlew :app:assembleRelease`.
+Подписанный APK: `app/build/outputs/apk/release/app-release.apk`.
+Без настроенной подписи релизная сборка завершится ошибкой; debug-сборка доступна без ключа.
+
+`signing.properties` и `*.jks` исключены из Git. Сохраните ключ и пароли в надёжном месте:
+для следующих обновлений установленного приложения требуется тот же ключ подписи.
+
 ## Ресурсы
 
 Происхождение изображений и шрифтов описано в [реестре ресурсов](docs/assets.md), сведения о звуках —

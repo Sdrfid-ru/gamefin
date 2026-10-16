@@ -1,6 +1,15 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+val releaseSigningProperties = Properties().apply {
+    val propertiesFile = rootProject.file("signing.properties")
+    if (propertiesFile.isFile) {
+        propertiesFile.inputStream().use { load(it) }
+    }
 }
 
 android {
@@ -14,6 +23,22 @@ android {
         versionCode = 12
         versionName = "0.11.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = releaseSigningProperties.getProperty("storeFile")?.let { rootProject.file(it) }
+            storePassword = releaseSigningProperties.getProperty("storePassword")
+            keyAlias = releaseSigningProperties.getProperty("keyAlias")
+            keyPassword = releaseSigningProperties.getProperty("keyPassword")
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            // Keep this assigned even without local credentials so release validation fails.
+            signingConfig = signingConfigs.getByName("release")
+        }
     }
 
     buildFeatures { compose = true }
