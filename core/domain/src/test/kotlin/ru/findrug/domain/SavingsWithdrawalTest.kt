@@ -88,7 +88,9 @@ class SavingsWithdrawalTest {
     fun `withdraw and redeposit cycles cannot earn saving credit from previous periods`() {
         val saved = ScenarioGame.deposit(ScenarioGame.selectGoal(planned(), "house"), 60)
         val closed =
-            ScenarioGame.finish(ScenarioGame.reward(saved, 4, TaskAnswer.Choice(1), "first"))
+            ScenarioGame.finish(
+                ScenarioGame.reward(saved, 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "first")
+            )
         val before = ScenarioGame.plan(ScenarioGame.next(closed), BudgetAmounts(70, 70, 60))
         var state = before
 
@@ -106,7 +108,14 @@ class SavingsWithdrawalTest {
         assertEquals(before.rewardClaims, state.rewardClaims)
         assertEquals(before.reports, state.reports)
         val report =
-            ScenarioGame.finish(ScenarioGame.reward(state, 4, TaskAnswer.Choice(1), "second"))
+            ScenarioGame.finish(
+                    ScenarioGame.reward(
+                        state,
+                        4,
+                        TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)),
+                        "second",
+                    )
+                )
                 .reports
                 .last()
         assertFalse(report.hasSavings)

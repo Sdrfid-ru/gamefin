@@ -21,11 +21,13 @@ import ru.findrug.domain.*
 @Composable
 internal fun TasksPage(s: ScenarioState, back: () -> Unit, start: (Int, Boolean) -> Unit) {
     var training by rememberSaveable { mutableStateOf(false) }
-    var page by rememberSaveable { mutableIntStateOf(0) }
-    val ids = if (training) ScenarioContent.trainingTasks else ScenarioContent.tasks.map { it.id }
+    var page by rememberSaveable(s.period, s.periodCompletedTasks) { mutableIntStateOf(0) }
+    val ids = if (training) ScenarioContent.trainingTasks else s.orderedTasks.map { it.id }
     val id = ids[page.coerceIn(ids.indices)]
     val task = ScenarioContent.task(id, training)
     val reward = ScenarioGame.rewardAmount(s, id, training)
+    val available = ScenarioGame.taskAvailable(s, id)
+    val completions = ScenarioGame.taskCompletionsToday(s, id)
     Page(
         "Задания",
         back,
@@ -33,9 +35,11 @@ internal fun TasksPage(s: ScenarioState, back: () -> Unit, start: (Int, Boolean)
             if (!s.periodClosed) {
                 PageSelector(page, ids.size) { page = it }
                 GameButton(
-                    if (reward > 0)
-                        "${if(!training && id in s.completedTasks) "Повторить" else "Начать"} · +$reward 🪙"
+                    if (!available) "Лимит на сегодня: 3 из 3"
+                    else if (reward > 0)
+                        "${if(!training && id in s.periodCompletedTasks) "Повторить" else "Начать"} · +$reward 🪙"
                     else "Начать без награды",
+                    enabled = available,
                     modifier = Modifier.testTag("task-$id"),
                 ) {
                     start(id, training)
@@ -68,8 +72,10 @@ internal fun TasksPage(s: ScenarioState, back: () -> Unit, start: (Int, Boolean)
                 Text(task.topic.uppercase(), fontSize = 12.sp, color = Muted)
                 Heading(task.title)
                 Text(task.description)
-                if (!training && id in s.completedTasks)
-                    Text("✓ Пройдено", color = Color(0xFF458663))
+                if (!training && id in s.periodCompletedTasks)
+                    Text("✓ Выполнено в этом периоде", color = Color(0xFF458663))
+                Text("Сегодня: $completions из 3 прохождений")
+                if (!available) Text("Это задание снова будет доступно завтра.")
             }
             Text(PeriodEconomy.rewardHint(s), fontSize = 14.sp)
         }

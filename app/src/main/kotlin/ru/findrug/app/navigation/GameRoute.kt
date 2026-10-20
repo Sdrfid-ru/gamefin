@@ -14,6 +14,7 @@ internal sealed interface GameRoute {
         TASKS,
         SHOP,
         SAVINGS,
+        UNEXPECTED_EXPENSE,
         RESULT,
         PROGRESS,
         COLLECTION,

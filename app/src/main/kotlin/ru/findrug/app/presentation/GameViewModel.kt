@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import ru.findrug.app.data.GameRepository
 import ru.findrug.app.navigation.GameRoute
 import ru.findrug.app.navigation.GameRoute.Screen
@@ -17,8 +19,9 @@ import ru.findrug.domain.*
 
 /**
  * Владелец игровой сессии: экраны передают намерения, правила возвращают новый снимок, репозиторий
- * сохраняет его. Только после записи состояние публикуется в интерфейсе. Маршрут восстанавливается
- * из SavedStateHandle, игровой прогресс — из GameRepository.
+ * сохраняет его. Изменения денег публикуются после записи. Черновик задания сразу доступен в
+ * памяти, чтобы быстрое возвращение на экран не теряло ответ; запись черновика идёт через тот же
+ * mutex. Маршрут восстанавливается из SavedStateHandle, игровой прогресс — из GameRepository.
  */
 internal class GameViewModel(
     private val repository: GameRepository,
@@ -29,6 +32,17 @@ internal class GameViewModel(
     val state = mutableState.asStateFlow()
     private val soundChannel = Channel<SoundCue>(Channel.BUFFERED)
     val sounds = soundChannel.receiveAsFlow()
+    private val writeMutex = Mutex()
+
+    private data class AttemptSave(
+        val period: Int,
+        val demo: Boolean,
+        val session: Int,
+        val attempt: TaskAttempt,
+    )
+
+    private val attemptSaves = Channel<AttemptSave>(Channel.CONFLATED)
+    private var session = 0
 
     init {
         viewModelScope.launch {
@@ -45,15 +59,72 @@ internal class GameViewModel(
                     )
             }
         }
+        viewModelScope.launch {
+            for (request in attemptSaves) {
+                writeMutex.withLock {
+                    val current = state.value.game ?: return@withLock
+                    if (
+                        request.session != session ||
+                            current.period != request.period ||
+                            current.demo != request.demo ||
+                            current.periodClosed ||
+                            request.attempt.claimId in current.rewardClaims ||
+                            current.taskAttempt != request.attempt
+                    )
+                        return@withLock
+                    try {
+                        repository.save(current)
+                        // A newer draft may already be visible while this disk write was awaiting.
+                        // Publishing current here would overwrite it with the older draft.
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        mutableState.value =
+                            state.value.copy(
+                                error = "Не удалось сохранить задание. Попробуй ещё раз."
+                            )
+                    }
+                }
+            }
+        }
     }
 
-    fun navigate(route: GameRoute, click: Boolean = false) {
+    fun navigate(route: GameRoute, click: Boolean = false, resumeTask: Boolean = true) {
         if (state.value.busy) return
-        setRoute(route)
+        val attempt = state.value.game?.resumableTaskAttempt
+        val target =
+            if (
+                route == Screen.TASKS &&
+                    resumeTask &&
+                    state.value.route !is GameRoute.Task &&
+                    state.value.game?.periodClosed == false &&
+                    attempt != null
+            )
+                GameRoute.Task(attempt.taskId, attempt.training)
+            else route
+        setRoute(target)
         if (click) soundChannel.trySend(SoundCue.CLICK)
     }
 
-    fun back() = navigate(state.value.route.parent)
+    fun back() = navigate(state.value.route.parent, resumeTask = false)
+
+    fun saveTaskAttempt(attempt: TaskAttempt) {
+        val game = state.value.game ?: return
+        if (
+            state.value.busy ||
+                !game.started ||
+                game.periodClosed ||
+                attempt.claimId in game.rewardClaims ||
+                !ScenarioGame.taskAvailable(game, attempt.taskId)
+        )
+            return
+        val task =
+            runCatching { ScenarioContent.task(attempt.taskId, attempt.training) }.getOrNull()
+                ?: return
+        if (!attempt.canResume(task, attempt.training)) return
+        mutableState.value = state.value.copy(game = game.copy(taskAttempt = attempt))
+        attemptSaves.trySend(AttemptSave(game.period, game.demo, session, attempt))
+    }
 
     private fun setRoute(route: GameRoute) {
         savedState["route"] = route.encode()
@@ -87,6 +158,11 @@ internal class GameViewModel(
     fun nextPeriod() = mutate("Новый бюджет начислен", Screen.BUDGET, ScenarioGame::next)
 
     fun selectGoal(id: String) = mutate("Цель выбрана") { ScenarioGame.selectGoal(it, id) }
+
+    fun selectRoom(id: String) = mutate("Фон комнаты выбран") { ScenarioGame.selectRoom(it, id) }
+
+    fun openUnexpectedExpense() =
+        mutate(next = Screen.UNEXPECTED_EXPENSE, change = UnexpectedExpenses::offer)
 
     fun setSound(value: Boolean) = mutate { it.copy(sound = value) }
 
@@ -148,9 +224,45 @@ internal class GameViewModel(
                 return
             }
         requestConfirmation(
-            "Забрать $amount монет из копилки?\nМонеты вернутся на баланс для покупок: ${preview.coins}.\nВ копилке останется ${preview.savings} монет. Накопления и прогресс к цели уменьшатся.",
+            "Забрать $amount монет из копилки?\nМонеты вернутся на баланс для покупок: ${preview.coins}.\nВ копилке останется ${preview.savings} монет. Накопления и прогресс к цели уменьшатся." +
+                (UnexpectedExpenses.goalImpact(game, amount)?.let { "\n\n$it" } ?: ""),
             ConfirmedAction.Withdraw(amount),
         )
+    }
+
+    fun requestUnexpectedWithdrawal(amount: Int) {
+        val game = state.value.game ?: return
+        if (state.value.busy) return
+        try {
+            val preview = UnexpectedExpenses.previewWithdrawal(game, amount)
+            requestConfirmation(
+                "Вернуть $amount монет из копилки на новую миску?\n" +
+                    "Баланс: ${preview.coinsBefore} → ${preview.coinsAfter}.\n\n" +
+                    preview.explanation() +
+                    "\n\nЭто только перевод. Оплату миски ты подтвердишь отдельно.",
+                ConfirmedAction.UnexpectedWithdrawal(preview),
+            )
+        } catch (e: ScenarioRule) {
+            mutableState.value = state.value.copy(error = e.message, confirmation = null)
+        }
+    }
+
+    fun requestUnexpectedPayment() {
+        val game = state.value.game ?: return
+        if (state.value.busy) return
+        try {
+            val preview = UnexpectedExpenses.pay(game, game.coins, game.savings)
+            if (preview == game) return
+            requestConfirmation(
+                "Оплатить новую миску за ${UnexpectedExpenses.PRICE} монет?\n" +
+                    "Баланс: ${game.coins} → ${preview.coins}.\n" +
+                    "Копилка останется ${game.savings} монет.\n" +
+                    "Это нужный непредвиденный расход. Он попадёт в расходы периода.",
+                ConfirmedAction.PayUnexpectedExpense(game.coins, game.savings),
+            )
+        } catch (e: ScenarioRule) {
+            mutableState.value = state.value.copy(error = e.message, confirmation = null)
+        }
     }
 
     fun requestCollection(goal: ScenarioGoal) {
@@ -195,13 +307,21 @@ internal class GameViewModel(
                 mutate("Из копилки на баланс: ${action.amount} монет") {
                     ScenarioGame.withdraw(it, action.amount)
                 }
+            is ConfirmedAction.UnexpectedWithdrawal ->
+                mutate(next = Screen.UNEXPECTED_EXPENSE) {
+                    UnexpectedExpenses.withdraw(it, action.preview)
+                }
+            is ConfirmedAction.PayUnexpectedExpense ->
+                mutate(next = Screen.UNEXPECTED_EXPENSE) {
+                    UnexpectedExpenses.pay(it, action.coins, action.savings)
+                }
             is ConfirmedAction.Collect -> {
                 val goal =
                     state.value.game?.availableGoals?.find { it.id == action.goalId }
                         ?: state.value.game?.goal
                         ?: return
                 mutate(
-                    "Мечта сбылась! ${goal.title} теперь в твоей коллекции.",
+                    "Мечта сбылась! ${goal.title} теперь в твоей коллекции.\nОткрыт фон «${ScenarioContent.roomTitles[goal.roomId]}».",
                     Screen.COLLECTION,
                 ) {
                     ScenarioGame.collectGoal(it, action.goalId)
@@ -221,16 +341,22 @@ internal class GameViewModel(
         if (state.value.busy) return
         mutableState.value = state.value.copy(busy = true)
         viewModelScope.launch {
-            try {
-                mutableState.value = state.value.copy(game = action())
-                setRoute(Screen.HOME)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                mutableState.value =
-                    state.value.copy(error = e.message ?: "Не удалось сохранить. Попробуй ещё раз.")
-            } finally {
-                mutableState.value = state.value.copy(busy = false)
+            writeMutex.withLock {
+                try {
+                    val updated = action()
+                    session++
+                    mutableState.value = state.value.copy(game = updated)
+                    setRoute(Screen.HOME)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    mutableState.value =
+                        state.value.copy(
+                            error = e.message ?: "Не удалось сохранить. Попробуй ещё раз."
+                        )
+                } finally {
+                    mutableState.value = state.value.copy(busy = false)
+                }
             }
         }
     }
@@ -240,41 +366,60 @@ internal class GameViewModel(
         next: GameRoute? = null,
         change: (ScenarioState) -> ScenarioState,
     ) {
-        val previous = state.value.game ?: return
+        if (state.value.game == null) return
         if (state.value.busy) return
         // Блокировка выставляется до запуска корутины: быстрые повторные нажатия
         // не должны запустить две записи, рассчитанные из одного исходного баланса.
         mutableState.value = state.value.copy(busy = true)
         viewModelScope.launch {
-            try {
-                val updated = change(previous)
-                // Порядок важен: при сбое записи интерфейс остаётся на прежнем снимке.
-                // Сообщение об успехе, переход и звук допустимы только после сохранения.
-                repository.save(updated)
-                val celebrates =
-                    updated.periodTasks > previous.periodTasks ||
-                        updated.collectedGoals != previous.collectedGoals ||
-                        updated.ownedItems != previous.ownedItems
-                mutableState.value =
-                    state.value.copy(game = updated, notice = success, celebration = celebrates)
-                if (next != null) setRoute(next)
-                if (updated.sound && success != null)
-                    soundChannel.trySend(
-                        when {
+            writeMutex.withLock {
+                val previous = state.value.game ?: return@withLock
+                try {
+                    val changed = change(previous)
+                    // Persist the one-time event in the same transaction as a successful money
+                    // action. Opening its card explicitly persists it through the same mutex.
+                    val moneyChanged =
+                        changed.coins != previous.coins || changed.savings != previous.savings
+                    val updated =
+                        if (moneyChanged)
+                            UnexpectedExpenses.offer(
+                                changed.copy(
+                                    unexpectedExpense =
+                                        changed.unexpectedExpense
+                                            ?: UnexpectedExpenses.offer(previous).unexpectedExpense
+                                )
+                            )
+                        else changed
+                    // Порядок важен: при сбое записи интерфейс остаётся на прежнем снимке.
+                    // Сообщение об успехе, переход и звук допустимы только после сохранения.
+                    repository.save(updated)
+                    val celebrates =
+                        updated.periodTasks > previous.periodTasks ||
                             updated.collectedGoals != previous.collectedGoals ||
-                                updated.periodTasks > previous.periodTasks -> SoundCue.SUCCESS
-                            updated.coins != previous.coins ||
-                                updated.savings != previous.savings -> SoundCue.COIN
-                            else -> SoundCue.SOFT
-                        }
-                    )
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                mutableState.value =
-                    state.value.copy(error = e.message ?: "Не удалось сохранить. Попробуй ещё раз.")
-            } finally {
-                mutableState.value = state.value.copy(busy = false)
+                            updated.ownedItems != previous.ownedItems
+                    mutableState.value =
+                        state.value.copy(game = updated, notice = success, celebration = celebrates)
+                    if (next != null) setRoute(next)
+                    if (updated.sound && success != null)
+                        soundChannel.trySend(
+                            when {
+                                updated.collectedGoals != previous.collectedGoals ||
+                                    updated.periodTasks > previous.periodTasks -> SoundCue.SUCCESS
+                                updated.coins != previous.coins ||
+                                    updated.savings != previous.savings -> SoundCue.COIN
+                                else -> SoundCue.SOFT
+                            }
+                        )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    mutableState.value =
+                        state.value.copy(
+                            error = e.message ?: "Не удалось сохранить. Попробуй ещё раз."
+                        )
+                } finally {
+                    mutableState.value = state.value.copy(busy = false)
+                }
             }
         }
     }

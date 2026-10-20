@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Source: user-provided bublle.svg. Original path and fill are preserved.
+     SVG Gaussian-blur shadows are intentionally omitted: VectorDrawable has no filter support.
+     Suggested text-safe bounds in viewport coordinates: x=64..750, y=56..476. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="814dp"
+    android:height="613dp"
+    android:viewportWidth="814"
+    android:viewportHeight="613">
+    <path
+        android:fillColor="#F3F1FB"
+        android:pathData="M752.752 19.7354C483.966 -6.01315 321.062 -4.46623 55.2949 19.7402C36.4088 21.4604 21.2997 36.3021 19.3701 55.168C2.95801 215.633 2.79266 319.794 19.376 485.553C21.294 504.724 36.8049 519.734 56.0205 521.142C93.8528 523.913 129.591 526.269 163.82 528.221C166.128 528.353 167.864 530.424 167.374 532.683C162.32 555.958 139.856 565.144 92.5122 577.456C88.2672 578.56 88.5945 584.569 92.9537 585.055C183.937 595.198 245.223 579.269 283.473 535.093C284.273 534.168 285.452 533.639 286.675 533.676C437.833 538.256 571.029 533.685 751.848 520.931C770.404 519.622 785.655 505.609 788.341 487.202C811.821 326.31 812.591 221.892 788.186 53.4102C785.574 35.379 770.888 21.4729 752.752 19.7354Z" />
+</vector>

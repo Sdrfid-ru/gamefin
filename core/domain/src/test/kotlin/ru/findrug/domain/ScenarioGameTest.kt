@@ -1,5 +1,6 @@
 package ru.findrug.domain
 
+import java.time.LocalDate
 import kotlin.test.*
 
 class ScenarioGameTest {
@@ -113,10 +114,14 @@ class ScenarioGameTest {
     fun `reward validates answer is idempotent and reduces repeats`() {
         val s = planned()
         assertFailsWith<ScenarioRule> { ScenarioGame.reward(s, 4, TaskAnswer.Choice(0), "bad") }
-        val first = ScenarioGame.reward(s, 4, TaskAnswer.Choice(1), "first")
+        val first = ScenarioGame.reward(s, 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "first")
         assertEquals(220, first.coins)
-        assertEquals(first, ScenarioGame.reward(first, 4, TaskAnswer.Choice(1), "first"))
-        val repeat = ScenarioGame.reward(first, 4, TaskAnswer.Choice(1), "repeat")
+        assertEquals(
+            first,
+            ScenarioGame.reward(first, 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "first"),
+        )
+        val repeat =
+            ScenarioGame.reward(first, 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "repeat")
         assertEquals(230, repeat.coins)
         assertEquals(setOf(4), repeat.completedTasks)
     }
@@ -139,11 +144,11 @@ class ScenarioGameTest {
     fun `all six tasks validate their educational action`() {
         val valid =
             listOf(
-                TaskAnswer.Categories(setOf(1, 2, 5)),
+                TaskAnswer.Categories(setOf(1, 2, 5, 6, 7), (0..7).toList()),
                 TaskAnswer.Budget(BudgetAmounts(50, 20, 30)),
-                TaskAnswer.Choice(80),
-                TaskAnswer.Choice(2),
-                TaskAnswer.Choice(1),
+                TaskAnswer.Choice(30),
+                TaskAnswer.Choice(0),
+                TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)),
                 TaskAnswer.Basket(setOf(0, 1)),
             )
         valid.forEachIndexed { id, answer ->
@@ -163,11 +168,14 @@ class ScenarioGameTest {
         assertFailsWith<ScenarioRule> { ScenarioGame.finish(planned()) }
         val s = ScenarioGame.buy(planned(), "food")
         assertFailsWith<ScenarioRule> { ScenarioGame.finish(s) }
-        val closed = ScenarioGame.finish(ScenarioGame.reward(s, 4, TaskAnswer.Choice(1), "one"))
+        val closed =
+            ScenarioGame.finish(
+                ScenarioGame.reward(s, 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "one")
+            )
         assertEquals(closed, ScenarioGame.finish(closed))
         assertFailsWith<ScenarioRule> { ScenarioGame.buy(closed, "water") }
         assertFailsWith<ScenarioRule> {
-            ScenarioGame.reward(closed, 4, TaskAnswer.Choice(1), "two")
+            ScenarioGame.reward(closed, 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "two")
         }
     }
 
@@ -180,7 +188,14 @@ class ScenarioGameTest {
             s = ScenarioGame.buy(s, "food")
             s = ScenarioGame.buy(s, "care")
             s = ScenarioGame.deposit(s, 60)
-            s = ScenarioGame.reward(s, 4, TaskAnswer.Choice(1), "period-$period")
+            s =
+                ScenarioGame.reward(
+                    s,
+                    4,
+                    TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)),
+                    "period-$period",
+                    date = LocalDate.of(2026, 1, period),
+                )
             s = ScenarioGame.finish(s)
             assertTrue(s.reports.last().successful)
             assertEquals(60 * period, s.savings)
@@ -212,7 +227,12 @@ class ScenarioGameTest {
         val s = planned().copy(reports = reports, period = 5)
         val closed =
             ScenarioGame.finish(
-                ScenarioGame.reward(ScenarioGame.buy(s, "decor"), 4, TaskAnswer.Choice(1), "five")
+                ScenarioGame.reward(
+                    ScenarioGame.buy(s, "decor"),
+                    4,
+                    TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)),
+                    "five",
+                )
             )
         assertFalse(closed.reports.last().successful)
         assertEquals("Знаток", closed.stage)

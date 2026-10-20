@@ -21,6 +21,7 @@ import ru.findrug.app.audio.LocalSceneAvailable
 import ru.findrug.app.navigation.GameNavigation
 import ru.findrug.app.presentation.GameUiState
 import ru.findrug.app.presentation.GameViewModel
+import ru.findrug.app.ui.art.roomResource
 import ru.findrug.app.ui.components.Brand
 import ru.findrug.app.ui.components.GameBottomNavigation
 import ru.findrug.app.ui.theme.Ink
@@ -58,7 +59,11 @@ internal fun GameRoot(state: GameUiState, model: GameViewModel) {
                     Image(
                         painterResource(
                             if (state.game?.profile == null) R.drawable.figma_3bb15
-                            else R.drawable.figma_ce1ad
+                            else
+                                roomResource(
+                                    state.game.roomId.takeIf { it in state.game.unlockedRooms }
+                                        ?: "default"
+                                )
                         ),
                         null,
                         Modifier.fillMaxSize(),

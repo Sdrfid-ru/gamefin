@@ -57,6 +57,7 @@ class PhoneLayoutTest {
     }
 
     private fun pageTo(tag: String) {
+        ui.rewindPages()
         repeat(8) {
             if (ui.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()) return
             next()
@@ -101,6 +102,7 @@ class PhoneLayoutTest {
         }
         tap("Задания")
         ui.onNodeWithTag("task-0").performClick()
+        ui.dismissTaskIntroduction()
         fits("task with bottom menu")
         ui.onNodeWithTag("nav-pet").performClick().assertIsSelected()
         action("Сохранить")
@@ -175,21 +177,23 @@ class PhoneLayoutTest {
         for (id in 0..5) {
             pageTo("task-$id")
             ui.onNodeWithTag("task-$id").performClick()
+            ui.dismissTaskIntroduction()
             fits("exercise $id")
             if (id == 0) {
                 shot("sort-unassigned")
-                for (item in 0..5) {
-                    ui.onNodeWithTag("category-item-$item").assertIsDisplayed().performClick()
+                for (item in ui.displayedCategoryItems()) {
+                    ui.onNodeWithTag("category-item-${item.id}").assertIsDisplayed().performClick()
                     ui.onNodeWithTag("category-want").assertIsDisplayed().performClick()
                 }
-                fits("all six items in one category")
+                fits("all eight items in one category")
                 tap("Проверить")
                 fits("sorting errors")
+                tap("Попробовать ещё")
                 action("Сбросить")
                 action("Проверить")
                 shot("04-sort")
                 tap("Подсказка")
-                tap("Понятно")
+                ui.onNodeWithTag("task-introduction-close").assertIsDisplayed().performClick()
                 tap("Сбросить")
             }
             if (id == 1) {
@@ -200,11 +204,8 @@ class PhoneLayoutTest {
             if (id == 4) {
                 tap("1 упаковка — 50 🪙")
                 fits("comparison error")
-                tap("2 упаковки — 70 🪙")
-                fits("reflection question")
-                ui.onNodeWithTag("reflection-option-1").assertIsDisplayed().performClick()
-                fits("reflection explanation")
-                ui.onNodeWithTag("reflection-done").assertIsDisplayed().performClick()
+                tap("Попробовать ещё")
+                ui.solveComparisonLevels()
                 fits("reward")
                 action("Получить награду")
                 shot("05-reward")
@@ -217,7 +218,10 @@ class PhoneLayoutTest {
     fun budgetReviewAndAllResultStepsKeepTheirActionsVisible() {
         var s = ScenarioGame.buy(planned(), "food")
         s = ScenarioGame.deposit(ScenarioGame.selectGoal(s, "house"), 30)
-        s = ScenarioGame.finish(ScenarioGame.reward(s, 4, TaskAnswer.Choice(1), "result"))
+        s =
+            ScenarioGame.finish(
+                ScenarioGame.reward(s, 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "result")
+            )
         start(s)
         tap("Итоги")
         fits("result table")

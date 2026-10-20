@@ -1,5 +1,6 @@
 package ru.findrug.domain
 
+import java.time.LocalDate
 import kotlin.test.*
 
 class ScenarioJourneyTest {
@@ -9,7 +10,8 @@ class ScenarioJourneyTest {
 
     @Test
     fun `rewards do not freeze plan but spending and saving do`() {
-        val earned = ScenarioGame.reward(planned(), 4, TaskAnswer.Choice(1), "task")
+        val earned =
+            ScenarioGame.reward(planned(), 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "task")
         val changed = ScenarioGame.plan(earned, BudgetAmounts(50, 70, 100))
         assertEquals(220, changed.coins)
         assertEquals(BudgetAmounts(), changed.actual)
@@ -43,7 +45,7 @@ class ScenarioJourneyTest {
     fun `goal receipt spends savings once preserves plan fact and unlocks next dream`() {
         val s = ScenarioGame.selectGoal(planned().copy(coins = 800), "bike")
         assertFailsWith<ScenarioRule> { ScenarioGame.collectGoal(s, "bike") }
-        val funded = ScenarioGame.deposit(s, 600)
+        val funded = ScenarioGame.deposit(s, 300)
         assertFailsWith<ScenarioRule> { ScenarioGame.collectGoal(funded, "house") }
         val collected = ScenarioGame.collectGoal(funded, "bike")
         assertEquals(funded.coins, collected.coins)
@@ -52,10 +54,10 @@ class ScenarioJourneyTest {
         assertEquals(1, collected.collectedGoals["bike"])
         assertEquals(funded.actual, collected.actual)
         assertEquals("savings", collected.history.last().account)
-        assertEquals(-600, collected.history.last().amount)
+        assertEquals(-300, collected.history.last().amount)
         assertFailsWith<ScenarioRule> { ScenarioGame.collectGoal(collected, "bike") }
         assertEquals(300, ScenarioGame.selectGoal(collected, "house").goal!!.price)
-        assertEquals(1200, ScenarioGame.selectGoal(collected, "bike").goal!!.price)
+        assertEquals(600, ScenarioGame.selectGoal(collected, "bike").goal!!.price)
     }
 
     @Test
@@ -69,8 +71,8 @@ class ScenarioJourneyTest {
         }
         assertEquals(mapOf("house" to 2, "telescope" to 1, "bike" to 1), s.collectedGoals)
         assertEquals(900, ScenarioGame.selectGoal(s, "house").goal!!.price)
-        assertEquals(3050, s.coins)
-        assertEquals(1950, s.actual.save)
+        assertEquals(3500, s.coins)
+        assertEquals(1500, s.actual.save)
     }
 
     @Test
@@ -87,15 +89,29 @@ class ScenarioJourneyTest {
     @Test
     fun `repeats and first completions share a finite budget`() {
         var s = planned()
-        repeat(12) { s = ScenarioGame.reward(s, 4, TaskAnswer.Choice(1), "repeat-$it", true) }
+        repeat(12) {
+            s =
+                ScenarioGame.reward(
+                    s,
+                    4,
+                    TaskAnswer.Choice(1),
+                    "repeat-$it",
+                    true,
+                    date = LocalDate.of(2026, 1, 1).plusDays(it / 3L),
+                )
+        }
         assertEquals(320, s.coins)
         assertEquals(12, s.paidRepeats)
         assertEquals(12, s.periodTasks)
         assertTrue(s.completedTasks.isEmpty())
-        val first = ScenarioGame.reward(s, 4, TaskAnswer.Choice(1), "first")
+        val first = ScenarioGame.reward(s, 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "first")
         assertEquals(340, first.coins)
-        assertEquals(first, ScenarioGame.reward(first, 4, TaskAnswer.Choice(1), "first"))
-        val capped = ScenarioGame.reward(first, 4, TaskAnswer.Choice(1), "another")
+        assertEquals(
+            first,
+            ScenarioGame.reward(first, 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "first"),
+        )
+        val capped =
+            ScenarioGame.reward(first, 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "another")
         assertEquals(350, capped.coins)
         assertEquals(0, ScenarioGame.rewardAmount(capped, 4, true))
         assertEquals(350, ScenarioGame.reward(capped, 4, TaskAnswer.Choice(1), "free", true).coins)
@@ -129,7 +145,14 @@ class ScenarioJourneyTest {
             s = ScenarioGame.buy(s, "care")
             if (period == 1) s = ScenarioGame.buy(s, "cap")
             s = ScenarioGame.deposit(s, 60)
-            s = ScenarioGame.reward(s, 4, TaskAnswer.Choice(1), "period-$period")
+            s =
+                ScenarioGame.reward(
+                    s,
+                    4,
+                    TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)),
+                    "period-$period",
+                    date = LocalDate.of(2026, 1, period),
+                )
             s = ScenarioGame.finish(s)
             assertEquals(
                 when {
@@ -148,7 +171,7 @@ class ScenarioJourneyTest {
         s = ScenarioGame.plan(s, BudgetAmounts(40, 0, 100))
         s = ScenarioGame.deposit(s, 100)
         assertEquals(100, s.savings)
-        assertEquals(600, s.goal!!.price)
+        assertEquals(300, s.goal!!.price)
         assertEquals(2, s.growthStage)
         assertTrue("cap" in s.ownedItems)
     }

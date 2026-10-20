@@ -43,6 +43,7 @@ class ScenarioFlowTest {
     }
 
     private fun pageToTag(tag: String) {
+        ui.rewindPages()
         repeat(8) {
             if (ui.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()) return
             nextPage()
@@ -128,21 +129,18 @@ class ScenarioFlowTest {
     }
 
     @Test
-    fun fourthRepeatStillPaysAndReturnsHome() {
+    fun fourthRepeatIsUnavailableWithoutChangingMoneyOrProgress() {
         var s = planned().copy(completedTasks = (0..5).toSet())
         repeat(3) { s = ScenarioGame.reward(s, 4, TaskAnswer.Choice(1), "paid-$it", true) }
         start(s)
         ui.onNodeWithText("Задания").performClick()
         tap("Тренировка")
         pageToTag("task-4")
-        ui.onNodeWithTag("task-4").assertIsDisplayed().performClick()
-        tap("2 упаковки — 70 🪙")
-        tap("Получить награду")
-        continueNotice()
-        ui.onNodeWithText("Игрок").assertExists()
-        assertEquals(240, state().coins)
-        assertEquals(4, state().periodTasks)
-        assertEquals(4, state().paidRepeats)
+        ui.onNodeWithTag("task-4").assertIsDisplayed().assertIsNotEnabled()
+        ui.onNodeWithText("Лимит на сегодня: 3 из 3").assertExists()
+        assertEquals(230, state().coins)
+        assertEquals(3, state().periodTasks)
+        assertEquals(3, state().paidRepeats)
     }
 
     private fun screenshot(name: String) {
@@ -169,6 +167,7 @@ class ScenarioFlowTest {
         ui.onNodeWithText("Монеты закончились — бывает!").assertExists()
         pageToTag("training-$task")
         ui.onNodeWithTag("training-$task").assertIsDisplayed().performClick()
+        ui.dismissTaskIntroduction()
     }
 
     @Test
@@ -178,10 +177,10 @@ class ScenarioFlowTest {
         ui.onNodeWithText("Осталось распределить: 5").assertExists()
         ui.onNodeWithText("Сохранить план").assertIsEnabled()
         tap("Сохранить план")
-        ui.onNodeWithText("5 монет").assertExists()
+        ui.onNodeWithText("Из новых монет свободно: 5").assertExists()
         tap("Изменить план")
         ui.onNodeWithContentDescription("Увеличить Коплю").performClick()
-        ui.onNodeWithText("Осталось распределить: 0").assertExists()
+        ui.onNodeWithText("Весь бюджет распределён").assertExists()
         tap("Сохранить план")
         ui.onNodeWithText("225 монет").assertExists()
         tap("Продолжить")
@@ -195,7 +194,7 @@ class ScenarioFlowTest {
         tap("Бюджет")
         ui.onNodeWithText("Сохранить план").assertIsEnabled()
         ui.onNodeWithContentDescription("Увеличить Коплю").performClick()
-        ui.onNodeWithText("Осталось распределить: 0").assertExists()
+        ui.onNodeWithText("Весь бюджет распределён").assertExists()
         tap("Сохранить план")
         tap("Продолжить")
         ui.waitUntil(30_000) { state().plan == BudgetAmounts(140, 150, 175) }
@@ -215,11 +214,11 @@ class ScenarioFlowTest {
         tap("Изменить план")
         ui.onNodeWithContentDescription("Уменьшить Хочу").assertIsDisplayed().performClick()
         tap("Сохранить план")
-        ui.onNodeWithText("10 монет").assertExists()
+        ui.onNodeWithText("Из новых монет свободно: 10").assertExists()
         screenshot("01-budget-review")
         ui.onNodeWithContentDescription("Назад").assertIsDisplayed().performClick()
         tap("Сохранить план")
-        ui.onNodeWithText("10 монет").assertExists()
+        ui.onNodeWithText("Из новых монет свободно: 10").assertExists()
         tap("Продолжить")
         ui.waitUntil(30_000) { state().plan == BudgetAmounts(50, 60, 80) }
         assertEquals(200, state().coins)
@@ -231,32 +230,39 @@ class ScenarioFlowTest {
         start(planned())
         tap("Задания")
         ui.onNodeWithTag("task-0").assertIsDisplayed().performClick()
-        (0..5).forEach { chooseCategory(it, false) }
+        ui.dismissTaskIntroduction()
+        val sample = ui.displayedCategoryItems()
+        val toCorrect = sample.first { it.needed }
+        sample.forEach { chooseCategory(it.id, false) }
         ui.onNodeWithText("У тебя получилось!").assertDoesNotExist()
         tap("Проверить")
         screenshot("02-sort-first-check")
-        ui.onNodeWithTag("category-item-1")
-            .assertContentDescriptionEquals("Корм: Хочу, проверь выбор")
+        ui.onNodeWithTag("task-retry").assertIsDisplayed()
+        tap("Попробовать ещё")
+        ui.onNodeWithTag("category-item-${toCorrect.id}")
+            .assertContentDescriptionEquals("${toCorrect.title}: Хочу")
         assertEquals(200, state().coins)
         tap("Подсказка")
-        tap("Понятно")
+        ui.dismissTaskIntroduction()
         tap("Сбросить")
         listOf("category-need", "category-want").forEach { tag ->
             ui.onNodeWithTag(tag).assertTextContains("Предметов: 0")
         }
         ui.onNodeWithText("Проверить").assertIsNotEnabled()
         // Arrange incorrectly first, then correct an already placed item.
-        (0..5).forEach { chooseCategory(it, it in setOf(2, 5)) }
+        sample.forEach { chooseCategory(it.id, it.needed && it.id != toCorrect.id) }
         tap("Проверить")
-        ui.onNodeWithTag("category-item-1")
-            .assertContentDescriptionEquals("Корм: Хочу, проверь выбор")
-        ui.onNodeWithTag("category-item-1").assertIsDisplayed()
+        tap("Попробовать ещё")
+        ui.onNodeWithTag("category-item-${toCorrect.id}")
+            .assertContentDescriptionEquals("${toCorrect.title}: Хочу")
+        ui.onNodeWithTag("category-item-${toCorrect.id}").assertIsDisplayed()
         screenshot("02-sort-correction")
-        val source = ui.onNodeWithTag("category-item-1")
+        val source = ui.onNodeWithTag("category-item-${toCorrect.id}")
         val destination = ui.onNodeWithTag("category-need").fetchSemanticsNode().boundsInRoot.center
         val origin = source.fetchSemanticsNode().boundsInRoot.topLeft
         source.performTouchInput { swipe(center, destination - origin, 400) }
-        ui.onNodeWithTag("category-item-1").assertContentDescriptionEquals("Корм: Нужно")
+        ui.onNodeWithTag("category-item-${toCorrect.id}")
+            .assertContentDescriptionEquals("${toCorrect.title}: Нужно")
         tap("Проверить")
         tap("Получить награду")
         continueNotice()
@@ -277,8 +283,10 @@ class ScenarioFlowTest {
         ui.onNodeWithText("Монеты закончились — бывает!").assertIsDisplayed()
         screenshot("03-empty-wallet")
         ui.onNodeWithTag("training-4").assertIsDisplayed().performClick()
+        ui.dismissTaskIntroduction()
         tap("1 упаковка — 50 🪙")
         assertEquals(0, state().coins)
+        tap("Попробовать ещё")
         tap("2 упаковки — 70 🪙")
         tap("Получить награду")
         ui.waitUntil(30_000) {
@@ -295,14 +303,14 @@ class ScenarioFlowTest {
     }
 
     @Test
-    fun shortSortingHasThreeItemsAndPaysWithoutCompletingMainTask() {
+    fun trainingSortingHasEightRandomItemsAndPaysWithoutCompletingMainTask() {
         start(planned().copy(coins = 0))
         openRecovery(0)
-        ui.onNodeWithTag("category-item-2").assertDoesNotExist()
+        val sample = ui.displayedCategoryItems()
         listOf("category-need", "category-want").forEach { tag ->
             ui.onNodeWithTag(tag).assertTextContains("Предметов: 0")
         }
-        listOf(0, 1, 5).forEach { chooseCategory(it, it != 0) }
+        sample.forEach { chooseCategory(it.id, it.needed) }
         tap("Проверить")
         tap("Получить награду")
         continueNotice()
@@ -340,7 +348,10 @@ class ScenarioFlowTest {
         s = ScenarioGame.buy(s, "food")
         s = ScenarioGame.buy(s, "toy")
         s = ScenarioGame.deposit(ScenarioGame.selectGoal(s, "house"), 30)
-        s = ScenarioGame.finish(ScenarioGame.reward(s, 4, TaskAnswer.Choice(1), "task"))
+        s =
+            ScenarioGame.finish(
+                ScenarioGame.reward(s, 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "task")
+            )
         start(s)
         tap("Итоги")
         tap("Дальше")

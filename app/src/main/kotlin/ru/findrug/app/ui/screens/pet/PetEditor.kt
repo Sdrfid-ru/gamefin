@@ -175,11 +175,11 @@ internal fun PetEditor(
                 }
             } else
                 Panel {
-                    Heading("Как вас зовут?")
+                    Heading("Как ты его назовёшь?")
                     OutlinedTextField(
                         name,
                         { name = it.take(20) },
-                        label = { Text("Как его зовут?") },
+                        label = { Text("Имя питомца") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = CircleShape,

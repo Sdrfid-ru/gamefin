@@ -26,6 +26,7 @@ internal fun RecoveryPage(
     val id = ScenarioContent.trainingTasks[page]
     val task = ScenarioContent.task(id, true)
     val reward = ScenarioGame.rewardAmount(s, id, true)
+    val available = ScenarioGame.taskAvailable(s, id)
     Page(
         "Быстрые тренировки",
         back,
@@ -33,7 +34,9 @@ internal fun RecoveryPage(
             if (!s.periodClosed) {
                 PageSelector(page, ScenarioContent.trainingTasks.size) { page = it }
                 GameButton(
-                    if (reward > 0) "Начать · +$reward 🪙" else "Начать без награды",
+                    if (!available) "Лимит на сегодня: 3 из 3"
+                    else if (reward > 0) "Начать · +$reward 🪙" else "Начать без награды",
+                    enabled = available,
                     modifier = Modifier.testTag("training-$id"),
                 ) {
                     start(id)
@@ -57,6 +60,7 @@ internal fun RecoveryPage(
             Panel {
                 Heading(task.title)
                 Text(task.description)
+                Text("Сегодня: ${ScenarioGame.taskCompletionsToday(s, id)} из 3 прохождений")
             }
         else Panel { Text("Начни следующий период в итогах.") }
     }

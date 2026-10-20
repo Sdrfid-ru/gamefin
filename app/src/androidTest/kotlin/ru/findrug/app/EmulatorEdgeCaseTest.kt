@@ -98,8 +98,7 @@ class EmulatorEdgeCaseTest {
 
     private fun openTask(id: Int) {
         tap("Задания")
-        repeat(id) { next() }
-        ui.onNodeWithTag("task-$id").assertIsDisplayed().performClick()
+        ui.openCatalogTask(id)
         ui.waitUntil(10_000) { ui.onAllNodesWithTag("task-$id").fetchSemanticsNodes().isEmpty() }
     }
 
@@ -123,17 +122,16 @@ class EmulatorEdgeCaseTest {
     private fun solveTask(id: Int) {
         when (id) {
             0 -> {
-                for (item in 0..5) {
-                    ui.onNodeWithTag("category-item-$item").performClick()
-                    ui.onNodeWithTag(
-                            if (item in setOf(1, 2, 5)) "category-need" else "category-want"
-                        )
+                for (item in ui.displayedCategoryItems()) {
+                    ui.onNodeWithTag("category-item-${item.id}").performClick()
+                    ui.onNodeWithTag(if (item.needed) "category-need" else "category-want")
                         .performClick()
                 }
                 tap("Проверить")
             }
             1 -> {
                 tap("Проверить")
+                tap("Попробовать ещё")
                 increase("Нужно", 5)
                 increase("Хочу", 2)
                 increase("Коплю", 3)
@@ -145,17 +143,16 @@ class EmulatorEdgeCaseTest {
             }
             4 -> {
                 tap("1 упаковка — 50 🪙")
-                tap("2 упаковки — 70 🪙")
+                tap("Попробовать ещё")
+                ui.solveComparisonLevels()
             }
             5 -> {
-                tap("🧸 Игрушка — 60")
+                tap("Игрушка — 60")
                 tap("Проверить")
+                tap("Попробовать ещё")
                 tap("Корм — 40")
                 tap("Проверить")
             }
-        }
-        if (ui.onAllNodesWithTag("reflection-skip").fetchSemanticsNodes().isNotEmpty()) {
-            ui.onNodeWithTag("reflection-skip").performClick()
         }
     }
 
@@ -239,7 +236,7 @@ class EmulatorEdgeCaseTest {
         closeSoftKeyboard()
         tap("Продолжить")
         next()
-        ui.onNodeWithText("Как его зовут?").performTextReplacement("Пушок")
+        ui.onNodeWithText("Имя питомца").performTextReplacement("Пушок")
         closeSoftKeyboard()
         tap("Сохранить")
         tap("Получить")
@@ -288,7 +285,8 @@ class EmulatorEdgeCaseTest {
             notice()
             back()
             assertEquals(period * 60, store.read().savings)
-            for (id in if (period == 1) 0..5 else 4..4) {
+            // Five periods can be played in one day, but each exercise has only three attempts.
+            for (id in if (period == 1) 0..5 else if (period <= 3) 4..4 else 2..2) {
                 openTask(id)
                 solveTask(id)
                 tap("Получить награду")

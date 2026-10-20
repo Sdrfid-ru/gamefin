@@ -37,8 +37,39 @@ object ScenarioContent {
         )
     val goals =
         listOf(
-            ScenarioGoal("house", "Домик для лисёнка", "🏡", 300),
-            ScenarioGoal("telescope", "Телескоп", "🔭", 450),
-            ScenarioGoal("bike", "Велосипед", "🚲", 600),
+            ScenarioGoal("house", "Домик для лисёнка", "🏡", 300, roomId = "pets"),
+            ScenarioGoal("telescope", "Телескоп", "🔭", 300, roomId = "astronomer"),
+            ScenarioGoal("bike", "Велосипед", "🚲", 300, roomId = "park"),
+            ScenarioGoal("tent", "Палатка", "goal_tent", 450, 1, "scout"),
+            ScenarioGoal(
+                "construction_set",
+                "Конструктор",
+                "goal_construction_set",
+                450,
+                1,
+                "constructor",
+            ),
+            ScenarioGoal("camera", "Фотоаппарат", "goal_camera", 600, 2, "photographer"),
+            ScenarioGoal(
+                "star_projector",
+                "Звёздный проектор",
+                "goal_star_projector",
+                600,
+                2,
+                "projector",
+            ),
+        )
+
+    val roomTitles =
+        mapOf(
+            "default" to "Моя комната",
+            "pets" to "Домик для лисёнка",
+            "astronomer" to "Комната астронома",
+            "park" to "Велопрогулка",
+            "scout" to "Поход",
+            "constructor" to "Мастерская конструктора",
+            "sport" to "Спортивная комната",
+            "photographer" to "Фотостудия",
+            "projector" to "Звёздная комната",
         )
 }

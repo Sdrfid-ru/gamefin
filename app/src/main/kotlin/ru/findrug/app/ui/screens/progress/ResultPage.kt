@@ -67,7 +67,11 @@ internal fun ResultPage(s: ScenarioState, back: () -> Unit, next: () -> Unit) {
                         Heading("${s.profile!!.pet} — ${s.stage}")
                         if (report.successful && s.successfulPeriods in listOf(2, 4))
                             Text(
-                                "Новая стадия! Твой лисёнок подрос благодаря решениям за несколько периодов."
+                                "Новая стадия! Твой лисёнок подрос. В копилке открылись 2 новые цели: " +
+                                    ScenarioContent.goals
+                                        .filter { it.growthStage == s.growthStage }
+                                        .joinToString { it.title } +
+                                    "."
                             )
                         else
                             Text(

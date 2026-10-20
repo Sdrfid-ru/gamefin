@@ -29,6 +29,11 @@ internal sealed interface ConfirmedAction {
 
     data class Collect(val goalId: String) : ConfirmedAction
 
+    data class UnexpectedWithdrawal(val preview: ru.findrug.domain.UnexpectedExpenseWithdrawal) :
+        ConfirmedAction
+
+    data class PayUnexpectedExpense(val coins: Int, val savings: Int) : ConfirmedAction
+
     data object ResetDemo : ConfirmedAction
 
     data object DeleteProfile : ConfirmedAction

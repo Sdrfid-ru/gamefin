@@ -13,7 +13,9 @@ class EducationalEconomyTest {
         )
 
     private fun finish(s: ScenarioState) =
-        ScenarioGame.finish(ScenarioGame.reward(s, 4, TaskAnswer.Choice(1), "lesson"))
+        ScenarioGame.finish(
+            ScenarioGame.reward(s, 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "lesson")
+        )
 
     @Test
     fun `water and one coin do not replace a savings plan or care`() {

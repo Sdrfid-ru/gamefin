@@ -98,7 +98,7 @@ class GameViewModelTest {
             runCurrent()
             val route = GameRoute.Task(4, false)
             repeat(2) {
-                model.claimTask(route, TaskAnswer.Choice(1), "same-claim")
+                model.claimTask(route, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "same-claim")
                 advanceUntilIdle()
             }
             assertEquals(220, model.state.value.game!!.coins)
@@ -306,6 +306,177 @@ class GameViewModelTest {
                 model.back()
                 assertEquals(GameRoute.Screen.SETTINGS, model.state.value.route)
             }
+        }
+
+    @Test
+    fun unfinishedAttemptSurvivesRestartAndTaskNavigationButBackOpensList() =
+        runTest(dispatcher) {
+            val repository = FakeRepository(planned())
+            val first = model(repository)
+            runCurrent()
+            val attempt =
+                TaskAttempt(2, false, "resume-me", draft = listOf(50, 20, 30), tipDismissed = true)
+            first.saveTaskAttempt(attempt)
+            advanceUntilIdle()
+            val restarted = model(repository)
+            runCurrent()
+            restarted.navigate(GameRoute.Screen.TASKS)
+            assertEquals(GameRoute.Task(2, false), restarted.state.value.route)
+            assertEquals(attempt, restarted.state.value.game!!.taskAttempt)
+            restarted.back()
+            assertEquals(GameRoute.Screen.TASKS, restarted.state.value.route)
+        }
+
+    @Test
+    fun completingLessonReturnsToUnfinishedFirstAndMovesCompletedLessonToEnd() =
+        runTest(dispatcher) {
+            val repository = FakeRepository(planned())
+            val model = model(repository)
+            runCurrent()
+            model.claimTask(
+                GameRoute.Task(0, false),
+                TaskAnswer.Categories(setOf(1, 2, 5, 6, 7), (0..7).toList()),
+                "completed-sorting",
+            )
+            advanceUntilIdle()
+            assertEquals(GameRoute.Screen.TASKS, model.state.value.route)
+            model.navigate(GameRoute.Screen.HOME)
+            model.navigate(GameRoute.Screen.TASKS)
+            assertEquals(GameRoute.Screen.TASKS, model.state.value.route)
+            val game = model.state.value.game!!
+            assertEquals(listOf(1, 2, 3, 4, 5, 0), game.orderedTasks.map { it.id })
+            assertEquals(1, game.recommendedTask)
+            assertNull(game.resumableTaskAttempt)
+        }
+
+    @Test
+    fun enteringTaskListDoesNotReopenAnAlreadyRewardedAttempt() =
+        runTest(dispatcher) {
+            val attempt = TaskAttempt(2, false, "already-claimed")
+            val repository =
+                FakeRepository(
+                    planned()
+                        .copy(
+                            taskAttempt = attempt,
+                            rewardClaims = setOf(attempt.claimId),
+                            periodCompletedTasks = setOf(0, 2),
+                        )
+                )
+            val model = model(repository)
+            runCurrent()
+            model.navigate(GameRoute.Screen.TASKS)
+            assertEquals(GameRoute.Screen.TASKS, model.state.value.route)
+            assertEquals(1, model.state.value.game!!.orderedTasks.first().id)
+            assertEquals(0, repository.writes)
+        }
+
+    @Test
+    fun immediateNavigationKeepsLatestDraftBeforeAnyDiskWriteStarts() =
+        runTest(dispatcher) {
+            val repository = FakeRepository(planned())
+            val model = model(repository)
+            runCurrent()
+            val attempt =
+                TaskAttempt(
+                    0,
+                    false,
+                    "immediate",
+                    listOf(0, 1, 2, 3, 4, 5, 6, 7),
+                    draft = listOf(-1, 1, -1, -1, -1, -1, -1, -1),
+                    tipDismissed = true,
+                )
+            model.navigate(GameRoute.Task(0, false))
+            model.saveTaskAttempt(attempt)
+            assertEquals(0, repository.writes)
+            model.back()
+            model.navigate(GameRoute.Screen.HOME)
+            model.navigate(GameRoute.Screen.TASKS)
+            assertEquals(GameRoute.Task(0, false), model.state.value.route)
+            assertEquals(attempt, model.state.value.game!!.taskAttempt)
+            advanceUntilIdle()
+            assertEquals(attempt, repository.game.taskAttempt)
+        }
+
+    @Test
+    fun completingAnOlderDraftWriteNeverReplacesTheNewestVisibleDraft() =
+        runTest(dispatcher) {
+            val repository = FakeRepository(planned())
+            val model = model(repository)
+            runCurrent()
+            val first = TaskAttempt(1, false, "draft-order", draft = listOf(10, 0, 0))
+            val latest = first.copy(draft = listOf(50, 20, 30), tipDismissed = true)
+            val gate = CompletableDeferred<Unit>()
+            repository.writeGate = gate
+            model.saveTaskAttempt(first)
+            runCurrent()
+            model.saveTaskAttempt(latest)
+            assertEquals(latest, model.state.value.game!!.taskAttempt)
+            gate.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(latest, model.state.value.game!!.taskAttempt)
+            assertEquals(latest, repository.game.taskAttempt)
+            assertEquals(200, repository.game.coins)
+        }
+
+    @Test
+    fun failedDraftWriteKeepsAnswerInMemoryAndCanBeRetriedWithoutChangingMoney() =
+        runTest(dispatcher) {
+            val repository = FakeRepository(planned())
+            val model = model(repository)
+            runCurrent()
+            val attempt = TaskAttempt(1, false, "retry-draft", draft = listOf(50, 20, 30))
+            repository.failure = IOException("Диск недоступен")
+            model.saveTaskAttempt(attempt)
+            advanceUntilIdle()
+            assertEquals(attempt, model.state.value.game!!.taskAttempt)
+            assertNull(repository.game.taskAttempt)
+            assertNotNull(model.state.value.error)
+            assertEquals(200, model.state.value.game!!.coins)
+            repository.failure = null
+            model.dismissError()
+            model.saveTaskAttempt(attempt)
+            advanceUntilIdle()
+            assertEquals(model.state.value.game, repository.game)
+            assertNull(model.state.value.error)
+        }
+
+    @Test
+    fun slowDraftWritesCannotUndoRewardsOrRestoreCompletedAttempt() =
+        runTest(dispatcher) {
+            val repository = FakeRepository(planned())
+            val model = model(repository)
+            runCurrent()
+            val attempt = TaskAttempt(4, true, "draft-and-reward", tipDismissed = true)
+            val gate = CompletableDeferred<Unit>()
+            repository.writeGate = gate
+            model.saveTaskAttempt(attempt)
+            runCurrent()
+            model.claimTask(GameRoute.Task(4, true), TaskAnswer.Choice(1), attempt.claimId)
+            model.saveTaskAttempt(attempt.copy(draft = listOf(1)))
+            gate.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(210, repository.game.coins)
+            assertEquals(1, repository.game.periodTasks)
+            assertNull(repository.game.taskAttempt)
+            assertEquals(repository.game, model.state.value.game)
+            model.saveTaskAttempt(attempt)
+            advanceUntilIdle()
+            assertNull(repository.game.taskAttempt)
+        }
+
+    @Test
+    fun roomSelectionIsPersistedAndLockedRoomsAreRejected() =
+        runTest(dispatcher) {
+            val repository = FakeRepository(planned().copy(collectedGoals = mapOf("house" to 1)))
+            val model = model(repository)
+            runCurrent()
+            model.selectRoom("pets")
+            advanceUntilIdle()
+            assertEquals("pets", repository.game.roomId)
+            model.selectRoom("photographer")
+            advanceUntilIdle()
+            assertEquals("pets", repository.game.roomId)
+            assertNotNull(model.state.value.error)
         }
 
     private class FakeRepository(var game: ScenarioState) : GameRepository {

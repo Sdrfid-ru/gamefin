@@ -17,6 +17,7 @@ import ru.findrug.app.ui.screens.progress.ProgressPage
 import ru.findrug.app.ui.screens.progress.ResultPage
 import ru.findrug.app.ui.screens.savings.CollectionPage
 import ru.findrug.app.ui.screens.savings.SavingsPage
+import ru.findrug.app.ui.screens.savings.UnexpectedExpensePage
 import ru.findrug.app.ui.screens.settings.AdultGate
 import ru.findrug.app.ui.screens.settings.DictionaryPage
 import ru.findrug.app.ui.screens.settings.HelpPage
@@ -45,10 +46,16 @@ internal fun GameNavigation(state: GameUiState, model: GameViewModel) {
         return
     }
     when (val route = state.route) {
-        Screen.HOME -> Home(game, { model.navigate(it, click = true) }, model::finishPeriod)
+        Screen.HOME ->
+            Home(
+                game,
+                { model.navigate(it, click = true) },
+                model::finishPeriod,
+                model::openUnexpectedExpense,
+            )
         Screen.PET -> PetEditor(game.profile!!, false, home, model::saveProfile)
         Screen.PROFILE -> ProfilePage(game, home) { model.navigate(Screen.PET) }
-        Screen.BUDGET -> BudgetPage(game, home, model::plan)
+        Screen.BUDGET -> BudgetPage(game, home, model::plan) { model.navigate(Screen.RESULT) }
         Screen.RECOVERY ->
             RecoveryPage(
                 game,
@@ -76,10 +83,23 @@ internal fun GameNavigation(state: GameUiState, model: GameViewModel) {
                 model::requestCollection,
                 model::requestDeposit,
                 model::requestWithdrawal,
+                model::openUnexpectedExpense,
+            )
+        Screen.UNEXPECTED_EXPENSE ->
+            UnexpectedExpensePage(
+                game,
+                home,
+                { model.navigate(Screen.TASKS) },
+                { model.navigate(Screen.BUDGET) },
+                { model.navigate(Screen.RESULT) },
+                { model.navigate(Screen.SAVINGS) },
+                model::requestUnexpectedWithdrawal,
+                model::requestUnexpectedPayment,
             )
         Screen.RESULT -> ResultPage(game, home, model::nextPeriod)
         Screen.PROGRESS -> ProgressPage(game, home) { model.navigate(it, click = true) }
-        Screen.COLLECTION -> CollectionPage(game, home) { model.navigate(Screen.SAVINGS) }
+        Screen.COLLECTION ->
+            CollectionPage(game, home, model::selectRoom) { model.navigate(Screen.SAVINGS) }
         Screen.ACHIEVEMENTS -> AchievementsPage(game, home)
         Screen.SETTINGS ->
             SettingsPage(
@@ -111,10 +131,15 @@ internal fun GameNavigation(state: GameUiState, model: GameViewModel) {
                     game,
                     route.id,
                     route.training,
-                    { model.navigate(if (route.fromRecovery) Screen.RECOVERY else Screen.TASKS) },
-                ) { answer, claim ->
-                    model.claimTask(route, answer, claim)
-                }
+                    {
+                        model.navigate(
+                            if (route.fromRecovery) Screen.RECOVERY else Screen.TASKS,
+                            resumeTask = false,
+                        )
+                    },
+                    { answer, claim -> model.claimTask(route, answer, claim) },
+                    model::saveTaskAttempt,
+                )
             }
     }
 }

@@ -13,7 +13,6 @@ import androidx.compose.ui.unit.*
 import ru.findrug.app.ui.art.GameIcon
 import ru.findrug.app.ui.components.GameButton
 import ru.findrug.app.ui.components.GameText
-import ru.findrug.app.ui.components.Page
 import ru.findrug.app.ui.components.Panel
 import ru.findrug.domain.*
 
@@ -23,14 +22,18 @@ internal fun BasketTask(
     exercise: Exercise.Basket,
     back: () -> Unit,
     hint: String?,
+    initialDraft: List<Int> = emptyList(),
+    updateDraft: (List<Int>) -> Unit = {},
+    help: TaskHelp? = null,
     done: (Set<Int>) -> Unit,
 ) {
-    var selection by rememberSaveable { mutableStateOf(emptyList<Int>()) }
+    var selection by rememberSaveable { mutableStateOf(initialDraft) }
     val selected = selection.toSet()
     fun toggle(id: Int) {
         selection = if (id in selected) selection - id else selection + id
+        updateDraft(selection)
     }
-    Page(title, back, actions = { GameButton("Проверить") { done(selected) } }) {
+    TaskScaffold(title, back, help, actions = { GameButton("Проверить") { done(selected) } }) {
         Panel {
             Text(hint ?: exercise.prompt, fontSize = 14.sp)
             exercise.items.forEach { item ->

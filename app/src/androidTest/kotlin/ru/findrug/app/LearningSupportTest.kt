@@ -55,8 +55,7 @@ class LearningSupportTest {
     private fun openTask(id: Int) {
         ui.onNodeWithTag("nav-home").performClick()
         tap("Задания")
-        repeat(id) { ui.onNodeWithTag("page-next").performClick() }
-        ui.onNodeWithTag("task-$id").performClick()
+        ui.openCatalogTask(id)
     }
 
     private fun screenshot(fileName: String) {
@@ -101,7 +100,7 @@ class LearningSupportTest {
         ui.onNodeWithTag("page-next").performClick()
         tap("Выбрать цель")
         notice()
-        ui.onNodeWithTag("savings-forecast").assertTextContains("10 периодов", substring = true)
+        ui.onNodeWithTag("savings-forecast").assertTextContains("5 периодов", substring = true)
     }
 
     @Test
@@ -118,23 +117,25 @@ class LearningSupportTest {
     }
 
     @Test
-    fun reflectionAndExplanationSurviveRestoreAndNeverChangeReward() {
+    fun incorrectComparisonExplainsRetryAndOnlyCorrectSolutionEnablesRewardAfterRestore() {
         val restoration = start()
         val before = store.read()
         openTask(4)
-        tap("2 упаковки — 70 🪙")
-        ui.onNodeWithText("Почему ты так выбрал?").assertExists()
+        tap("1 упаковка — 50 🪙")
+        ui.onNodeWithTag("task-retry").assertIsDisplayed()
+        ui.onNodeWithText("Получить награду").assertDoesNotExist()
         fits()
-        screenshot("reflection-question")
+        screenshot("incorrect-comparison")
         restoration.emulateSavedInstanceStateRestore()
-        ui.onNodeWithTag("reflection-option-1").assertIsDisplayed().performClick()
-        ui.onNodeWithText("Не всегда.", substring = true).assertIsDisplayed()
+        ui.onNodeWithTag("task-error-explanation").assertTextContains("50", substring = true)
         fits()
-        screenshot("reflection-explanation")
-        restoration.emulateSavedInstanceStateRestore()
-        ui.onNodeWithText("Не всегда.", substring = true).assertIsDisplayed()
-        assertEquals(before, store.read())
-        ui.onNodeWithTag("reflection-done").performClick()
+        assertEquals(before.coins, store.read().coins)
+        assertEquals(before.savings, store.read().savings)
+        assertEquals(before.history, store.read().history)
+        assertEquals(before.rewardClaims, store.read().rewardClaims)
+        assertEquals(before.periodTasks, store.read().periodTasks)
+        tap("Попробовать ещё")
+        ui.solveComparisonLevels()
         restoration.emulateSavedInstanceStateRestore()
         ui.onNodeWithText("Награда: +20 монет").assertExists()
         tap("Получить награду")
@@ -142,19 +143,18 @@ class LearningSupportTest {
         assertEquals(220, store.read().coins)
         assertEquals(1, store.read().periodTasks)
         openTask(4)
-        tap("2 упаковки — 70 🪙")
-        ui.onNodeWithTag("reflection-skip").assertDoesNotExist()
+        ui.solveComparisonLevels()
         tap("Получить награду")
         notice()
         assertEquals(230, store.read().coins)
     }
 
     @Test
-    fun skippingReflectionKeepsNormalRewardAndTrainingDoesNotAsk() {
+    fun reasonableSavingAndCorrectTrainingAnswersReceiveTheirNormalRewards() {
         start()
         openTask(2)
         tap("30 монет")
-        ui.onNodeWithTag("reflection-skip").assertIsDisplayed().performClick()
+        ui.onNodeWithText("У тебя получилось!").assertIsDisplayed()
         assertEquals(200, store.read().coins)
         tap("Получить награду")
         notice()
@@ -164,8 +164,9 @@ class LearningSupportTest {
         tap("Тренировка")
         ui.onNodeWithTag("page-next").performClick()
         ui.onNodeWithTag("task-4").performClick()
+        ui.dismissTaskIntroduction()
         tap("2 упаковки — 70 🪙")
-        ui.onNodeWithTag("reflection-skip").assertDoesNotExist()
+        ui.onNodeWithText("У тебя получилось!").assertIsDisplayed()
         tap("Получить награду")
         notice()
         assertEquals(230, store.read().coins)

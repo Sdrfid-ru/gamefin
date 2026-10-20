@@ -1,6 +1,5 @@
 package ru.findrug.app.ui.screens.tasks
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,44 +22,66 @@ internal fun TaskPage(
     training: Boolean,
     back: () -> Unit,
     claim: (TaskAnswer, String) -> Unit,
+    saveAttempt: (TaskAttempt) -> Unit,
 ) {
-    val definition = ScenarioContent.task(task, training)
+    val catalogDefinition = ScenarioContent.task(task, training)
+    if (!ScenarioGame.taskAvailable(s, task)) {
+        Page(catalogDefinition.title, back) {
+            Panel {
+                Heading("На сегодня всё!")
+                Text("Это задание уже пройдено 3 раза сегодня. Оно снова будет доступно завтра.")
+            }
+        }
+        return
+    }
     // ID попытки и принятый ответ переживают пересоздание Activity вместе. Новый UUID
     // при каждом показе результата позволил бы повторно получить ту же награду.
-    val claimId = rememberSaveable { UUID.randomUUID().toString() }
-    var savedAnswer by rememberSaveable { mutableStateOf(emptyList<Int>()) }
-    val answer = savedAnswer.restoredAnswer()
-    var explanation by rememberSaveable { mutableStateOf<String?>(null) }
+    var attempt by
+        rememberSaveable(task, training, s.period, stateSaver = TaskAttemptSaver) {
+            mutableStateOf(
+                s.resumableTaskAttempt?.takeIf { it.canResume(catalogDefinition, training) }
+                    ?: TaskAttempt(
+                        task,
+                        training,
+                        UUID.randomUUID().toString(),
+                        (catalogDefinition.exercise as? Exercise.Categories)?.sampleItemIds()
+                            ?: emptyList(),
+                    )
+            )
+        }
+    fun persist(value: TaskAttempt) {
+        attempt = value
+        saveAttempt(value)
+    }
+    LaunchedEffect(attempt.claimId) { saveAttempt(attempt) }
+    val definition =
+        when (val exercise = catalogDefinition.exercise) {
+            is Exercise.Categories ->
+                catalogDefinition.copy(
+                    exercise =
+                        exercise.copy(
+                            items =
+                                attempt.categoryItemIds.mapNotNull { id ->
+                                    exercise.items.find { it.id == id }
+                                }
+                        )
+                )
+            else -> catalogDefinition
+        }
+    val answer = attempt.acceptedAnswer.restoredAnswer()
+    val explanation =
+        answer?.let { runCatching { ScenarioGame.answer(task, it, training) }.getOrNull() }
     var hint by rememberSaveable { mutableStateOf<String?>(null) }
-    var reflectionChoice by rememberSaveable { mutableStateOf<Int?>(null) }
-    var reflectionDone by rememberSaveable { mutableStateOf(false) }
     fun evaluate(value: TaskAnswer) {
         try {
-            explanation = ScenarioGame.answer(task, value, training)
-            savedAnswer = value.savedValues()
+            ScenarioGame.answer(task, value, training)
+            persist(attempt.copy(acceptedAnswer = value.savedValues()))
             hint = null
         } catch (e: ScenarioRule) {
             hint = e.message
         }
     }
     if (explanation != null && answer != null) {
-        val reflection = definition.reflection
-        // Вопрос появляется только до первой награды за это задание, без повторов и тренировок.
-        // Это локальный этап интерфейса: ответ и пропуск ведут к одному обычному claim ниже.
-        if (reflection != null && !training && task !in s.completedTasks && !reflectionDone) {
-            val reflectionBack = {
-                if (reflectionChoice != null) reflectionChoice = null else back()
-            }
-            BackHandler(reflectionChoice != null) { reflectionChoice = null }
-            ReflectionPage(
-                reflection,
-                reflectionChoice,
-                { reflectionChoice = it },
-                reflectionBack,
-                { reflectionDone = true },
-            )
-            return
-        }
         Page(
             definition.title,
             back,
@@ -69,14 +90,14 @@ internal fun TaskPage(
                     if (ScenarioGame.rewardAmount(s, task, training) > 0) "Получить награду"
                     else "Завершить задание"
                 ) {
-                    claim(answer, claimId)
+                    claim(answer, attempt.claimId)
                 }
             },
         ) {
             Fox(s.profile, Modifier.fillMaxWidth().height(120.dp), s.animations, happy = true)
             Panel {
                 Heading("У тебя получилось!")
-                Text(explanation!!)
+                Text(explanation)
                 Text(
                     if (ScenarioGame.rewardAmount(s, task, training) > 0)
                         "Награда: +${ScenarioGame.rewardAmount(s, task, training)} монет"
@@ -87,5 +108,21 @@ internal fun TaskPage(
         }
         return
     }
-    TaskExercisePage(definition, hint, back, ::evaluate)
+    TaskExercisePage(
+        definition,
+        hint,
+        back,
+        ::evaluate,
+        attempt.draft,
+        { persist(attempt.copy(draft = it)) },
+        definition.introduction?.let {
+            TaskHelp(
+                it,
+                !attempt.tipDismissed,
+                { persist(attempt.copy(tipDismissed = false)) },
+                { persist(attempt.copy(tipDismissed = true)) },
+            )
+        },
+        retry = { hint = null },
+    )
 }

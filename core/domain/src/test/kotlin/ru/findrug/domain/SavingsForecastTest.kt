@@ -42,37 +42,4 @@ class SavingsForecastTest {
                 assertEquals(label, SavingsForecast(count, 1).periodLabel())
             }
     }
-
-    @Test
-    fun `reflection content can extend a task and rejects invalid options`() {
-        val base = TaskCatalog.tasks.first().copy(id = 71)
-        val reflection =
-            DecisionReflection(
-                "Объясни решение",
-                listOf(
-                    ReflectionOption(10, "Причина", "Пояснение"),
-                    ReflectionOption(20, "Не знаю", "Подсказка"),
-                ),
-            )
-        TaskDefinitions.validate(listOf(base.copy(reflection = reflection)))
-        assertFailsWith<IllegalArgumentException> {
-            TaskDefinitions.validate(
-                listOf(
-                    base.copy(
-                        reflection = reflection.copy(options = listOf(reflection.options.first()))
-                    )
-                )
-            )
-        }
-        assertFailsWith<IllegalArgumentException> {
-            TaskDefinitions.validate(
-                listOf(
-                    base.copy(
-                        reflection =
-                            reflection.copy(options = List(2) { reflection.options.first() })
-                    )
-                )
-            )
-        }
-    }
 }

@@ -56,6 +56,7 @@ class ContentEconomyTest {
     private fun training() {
         ui.onNodeWithTag("page-next").performClick()
         ui.onNodeWithTag("training-4").assertIsDisplayed().performClick()
+        ui.dismissTaskIntroduction()
         tap("2 упаковки — 70 🪙")
     }
 
@@ -74,6 +75,7 @@ class ContentEconomyTest {
         tap("Тренировка")
         ui.onNodeWithTag("page-next").performClick()
         ui.onNodeWithTag("task-4").performClick()
+        ui.dismissTaskIntroduction()
         tap("2 упаковки — 70 🪙")
         ui.onNodeWithText("Без денежной награды: лимит периода исчерпан. Прогресс сохранится.")
             .assertIsDisplayed()
@@ -223,14 +225,20 @@ class ContentEconomyTest {
             GameTheme {
                 key(index) {
                     var hint by remember { mutableStateOf<String?>(null) }
-                    TaskExercisePage(definitions[index], hint, {}) { answer ->
-                        try {
-                            results += TaskEvaluator.evaluate(definitions[index], answer)
-                            if (index < definitions.lastIndex) index++
-                        } catch (e: ScenarioRule) {
-                            hint = e.message
-                        }
-                    }
+                    TaskExercisePage(
+                        definitions[index],
+                        hint,
+                        {},
+                        evaluate = { answer ->
+                            try {
+                                results += TaskEvaluator.evaluate(definitions[index], answer)
+                                if (index < definitions.lastIndex) index++
+                            } catch (e: ScenarioRule) {
+                                hint = e.message
+                            }
+                        },
+                        retry = { hint = null },
+                    )
                 }
             }
         }
@@ -245,6 +253,7 @@ class ContentEconomyTest {
         tap("Проверить")
         tap("Цена 60")
         ui.onNodeWithText("Есть дешевле").assertIsDisplayed()
+        tap("Попробовать ещё")
         tap("Цена 40")
         tap("Обед — 25")
         tap("Проверить")

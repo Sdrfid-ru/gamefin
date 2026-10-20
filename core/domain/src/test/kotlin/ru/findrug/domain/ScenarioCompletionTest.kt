@@ -47,31 +47,36 @@ class ScenarioCompletionTest {
     }
 
     @Test
-    fun `short classification uses three items and cannot substitute for the full task`() {
-        assertEquals(
-            listOf(0, 1, 5),
-            (ScenarioContent.task(0, true).exercise as Exercise.Categories).items.map { it.id },
-        )
-        assertEquals(6, (ScenarioContent.task(0).exercise as Exercise.Categories).items.size)
-        val short = TaskAnswer.Categories(setOf(1, 5))
-        assertFailsWith<ScenarioRule> { ScenarioGame.reward(fresh(), 0, short, "short-as-main") }
+    fun `classification validates all eight displayed items in both practice and main task`() {
+        val main = ScenarioContent.task(0).exercise as Exercise.Categories
+        val training = ScenarioContent.task(0, true).exercise as Exercise.Categories
+        assertEquals(8, main.sampleSize)
+        assertEquals(8, training.sampleSize)
+        assertEquals(26, main.items.size)
+        assertEquals(main.items, training.items)
+        val incomplete = TaskAnswer.Categories(setOf(1, 5), listOf(0, 1, 5))
         assertFailsWith<ScenarioRule> {
-            ScenarioGame.reward(fresh(), 0, TaskAnswer.Categories(setOf(0, 1, 5)), "wrong", true)
+            ScenarioGame.reward(fresh(), 0, incomplete, "incomplete-main")
         }
-        val earned = ScenarioGame.reward(fresh(), 0, short, "short", true)
+        assertFailsWith<ScenarioRule> {
+            ScenarioGame.reward(fresh(), 0, incomplete, "incomplete-training", true)
+        }
+        val complete = TaskAnswer.Categories(setOf(1, 2, 5, 6, 7), (0..7).toList())
+        assertFailsWith<ScenarioRule> {
+            ScenarioGame.reward(fresh(), 0, complete.copy(need = setOf(0, 1, 5)), "wrong", true)
+        }
+        val earned = ScenarioGame.reward(fresh(), 0, complete, "training", true)
         assertEquals(210, earned.coins)
-        assertEquals(earned, ScenarioGame.reward(earned, 0, short, "short", true))
-        assertEquals(
-            230,
-            ScenarioGame.reward(earned, 0, TaskAnswer.Categories(setOf(1, 2, 5)), "full").coins,
-        )
+        assertTrue(earned.completedTasks.isEmpty())
+        assertEquals(earned, ScenarioGame.reward(earned, 0, complete, "training", true))
+        assertEquals(230, ScenarioGame.reward(earned, 0, complete, "full").coins)
     }
 
     @Test
     fun `each rescue training is paid and invalid variants cannot claim a reward`() {
         val answers =
             mapOf(
-                0 to TaskAnswer.Categories(setOf(1, 5)),
+                0 to TaskAnswer.Categories(setOf(1, 2, 5, 6, 7), (0..7).toList()),
                 1 to TaskAnswer.Budget(BudgetAmounts(30, 10, 10)),
                 4 to TaskAnswer.Choice(1),
             )

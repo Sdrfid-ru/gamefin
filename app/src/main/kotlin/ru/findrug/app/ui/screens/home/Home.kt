@@ -21,13 +21,19 @@ import ru.findrug.app.ui.components.Meter
 import ru.findrug.app.ui.components.RoundButton
 import ru.findrug.app.ui.components.SideAction
 import ru.findrug.app.ui.pet.Fox
+import ru.findrug.app.ui.screens.savings.UnexpectedExpenseCard
 import ru.findrug.app.ui.theme.Cream
 import ru.findrug.app.ui.theme.Ink
 import ru.findrug.app.ui.theme.Muted
 import ru.findrug.domain.*
 
 @Composable
-internal fun Home(s: ScenarioState, navigate: (GameRoute) -> Unit, finish: () -> Unit) {
+internal fun Home(
+    s: ScenarioState,
+    navigate: (GameRoute) -> Unit,
+    finish: () -> Unit,
+    unexpectedExpense: () -> Unit,
+) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val compact = maxHeight < 700.dp
         Column(
@@ -163,12 +169,11 @@ internal fun Home(s: ScenarioState, navigate: (GameRoute) -> Unit, finish: () ->
                         "Задания",
                         badgeCount =
                             if (s.periodClosed) 0
-                            else ScenarioContent.tasks.count { it.id !in s.completedTasks },
+                            else ScenarioContent.tasks.count { it.id !in s.periodCompletedTasks },
                     ) {
                         navigate(GameRoute.Screen.TASKS)
                     }
                     SideAction("🛒", "Магазин") { navigate(GameRoute.Screen.SHOP) }
-                    SideAction("🐷", "Копилка") { navigate(GameRoute.Screen.SAVINGS) }
                 }
                 Column(
                     Modifier.align(Alignment.TopEnd),
@@ -192,7 +197,7 @@ internal fun Home(s: ScenarioState, navigate: (GameRoute) -> Unit, finish: () ->
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    GameIcon(s.goal?.icon ?: "🐷", 38.dp)
+                    GameIcon(s.goal?.icon ?: "🎯", 38.dp)
                     Column(Modifier.weight(1f)) {
                         Text(
                             s.goal?.title ?: "Выбери свою цель",
@@ -204,7 +209,7 @@ internal fun Home(s: ScenarioState, navigate: (GameRoute) -> Unit, finish: () ->
                             s.goal?.let {
                                 if (s.savings >= it.price) "Цель накоплена! Нажми, чтобы получить"
                                 else "${s.savings} / ${it.price} • осталось ${it.price - s.savings}"
-                            } ?: "Домик, телескоп или велосипед",
+                            } ?: "Доступно целей: ${s.availableGoals.size}",
                             fontSize = 10.sp,
                             color = Muted,
                         )
@@ -213,55 +218,62 @@ internal fun Home(s: ScenarioState, navigate: (GameRoute) -> Unit, finish: () ->
                 }
                 Meter(s.savings, s.goal?.price ?: 100)
             }
-            val taskId = s.recommendedTask
-            val recovery =
-                s.coins < ScenarioContent.products.filter { it.need }.minOf { it.price } &&
-                    !s.periodClosed
-            val recoveryReward =
-                ScenarioContent.trainingTasks.maxOf { ScenarioGame.rewardAmount(s, it, true) }
-            val taskReward = ScenarioGame.rewardAmount(s, taskId)
-            Row(
-                Modifier.fillMaxWidth()
-                    .testTag(if (recovery) "recovery-home" else "recommended-task")
-                    .background(Cream, RoundedCornerShape(18.dp))
-                    .clickable {
-                        navigate(
-                            if (s.periodClosed) GameRoute.Screen.RESULT
-                            else if (recovery) GameRoute.Screen.RECOVERY
-                            else GameRoute.Task(taskId, false)
+            val hasUnexpectedExpense =
+                s.unexpectedExpense?.status == UnexpectedExpenseStatus.PENDING ||
+                    (s.unexpectedExpense == null && UnexpectedExpenses.eligible(s))
+            if (hasUnexpectedExpense) {
+                UnexpectedExpenseCard(s, unexpectedExpense)
+            } else {
+                val taskId = s.recommendedTask
+                val recovery =
+                    s.coins < ScenarioContent.products.filter { it.need }.minOf { it.price } &&
+                        !s.periodClosed
+                val recoveryReward =
+                    ScenarioContent.trainingTasks.maxOf { ScenarioGame.rewardAmount(s, it, true) }
+                val taskReward = ScenarioGame.rewardAmount(s, taskId)
+                Row(
+                    Modifier.fillMaxWidth()
+                        .testTag(if (recovery) "recovery-home" else "recommended-task")
+                        .background(Cream, RoundedCornerShape(18.dp))
+                        .clickable {
+                            navigate(
+                                if (s.periodClosed) GameRoute.Screen.RESULT
+                                else if (recovery) GameRoute.Screen.RECOVERY
+                                else GameRoute.Task(taskId, false)
+                            )
+                        }
+                        .padding(11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            if (s.periodClosed) "Период завершён"
+                            else if (recovery)
+                                if (s.coins == 0) "Монеты закончились — бывает!"
+                                else "На нужное пока не хватает"
+                            else "Задание периода ${s.period}",
+                            fontSize = 10.sp,
+                            color = Muted,
+                        )
+                        Text(
+                            if (s.periodClosed) "Посмотреть итоги"
+                            else if (recovery)
+                                if (recoveryReward > 0) "Давай заработаем новые"
+                                else "Выбрать следующий шаг"
+                            else ScenarioContent.task(taskId).title,
+                            fontSize = 13.sp,
+                            color = Ink,
+                            fontWeight = FontWeight.Bold,
                         )
                     }
-                    .padding(11.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        if (s.periodClosed) "Период завершён"
-                        else if (recovery)
-                            if (s.coins == 0) "Монеты закончились — бывает!"
-                            else "На нужное пока не хватает"
-                        else "Задание периода ${s.period}",
-                        fontSize = 10.sp,
-                        color = Muted,
-                    )
-                    Text(
-                        if (s.periodClosed) "Итоги и следующий бюджет"
-                        else if (recovery)
-                            if (recoveryReward > 0) "Давай заработаем новые"
-                            else "Выбрать следующий шаг"
-                        else ScenarioContent.task(taskId).title,
-                        fontSize = 13.sp,
+                    GameText(
+                        if (s.periodClosed) "›"
+                        else if (recovery) "Помощь ›"
+                        else if (taskReward > 0) "+$taskReward 🪙 ›" else "Практика ›",
+                        fontSize = 12.sp,
                         color = Ink,
-                        fontWeight = FontWeight.Bold,
                     )
                 }
-                GameText(
-                    if (s.periodClosed) "›"
-                    else if (recovery) "Помощь ›"
-                    else if (taskReward > 0) "+$taskReward 🪙 ›" else "Практика ›",
-                    fontSize = 12.sp,
-                    color = Ink,
-                )
             }
             if (s.demo)
                 Text(

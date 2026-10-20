@@ -25,7 +25,7 @@ import ru.findrug.domain.*
 
 @Composable
 internal fun BudgetEditor(total: Int, amounts: BudgetAmounts, change: (BudgetAmounts) -> Unit) {
-    val remaining = total - amounts.total
+    val remaining = total.toLong() - amounts.need - amounts.want - amounts.save
     val compact = LocalCompactPage.current
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -72,7 +72,9 @@ internal fun BudgetEditor(total: Int, amounts: BudgetAmounts, change: (BudgetAmo
                             Modifier.weight(1f)
                                 .height(48.dp)
                                 .semantics { contentDescription = "Уменьшить $label" }
-                                .clickable { update((amount - 10).coerceAtLeast(0)) },
+                                .clickable {
+                                    update((amount.toLong() - 10).coerceAtLeast(0).toInt())
+                                },
                             contentAlignment = Alignment.Center,
                         ) {
                             FigmaVector(R.raw.figma_03ea4, Modifier.size(25.dp))
@@ -84,8 +86,12 @@ internal fun BudgetEditor(total: Int, amounts: BudgetAmounts, change: (BudgetAmo
                                 .clickable {
                                     // Остаток может быть некратным десяти после покупок.
                                     // Последний шаг забирает его целиком, иначе план не заполнить.
-                                    val step = if (remaining in 1..9) remaining else 10
-                                    update((amount + step).coerceAtMost(10000))
+                                    val step = if (remaining in 1L..9L) remaining else 10L
+                                    update(
+                                        (amount.toLong() + step)
+                                            .coerceAtMost(Int.MAX_VALUE.toLong())
+                                            .toInt()
+                                    )
                                 },
                             contentAlignment = Alignment.Center,
                         ) {
@@ -96,11 +102,14 @@ internal fun BudgetEditor(total: Int, amounts: BudgetAmounts, change: (BudgetAmo
             }
         }
         Text(
-            if (remaining >= 0) "Осталось распределить: $remaining"
-            else "Уменьши сумму на ${-remaining}",
+            when {
+                remaining == 0L -> "Весь бюджет распределён"
+                remaining > 0 -> "Осталось распределить: $remaining"
+                else -> "Уменьши сумму на ${-remaining}"
+            },
             color = if (remaining >= 0) Ink else Color(0xFFB04438),
         )
-        if (remaining in 1..9)
+        if (remaining in 1L..9L)
             Text(
                 "Нажми «+» в любой категории, чтобы добавить оставшиеся $remaining монет.",
                 fontSize = 12.sp,

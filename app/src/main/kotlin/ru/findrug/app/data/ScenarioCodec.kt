@@ -22,6 +22,29 @@ internal object ScenarioCodec {
             put("planLocked", s.planLocked)
             put("ownedItems", JSONArray(s.ownedItems.toList()))
             put("collectedGoals", JSONObject(s.collectedGoals))
+            put("roomId", s.roomId)
+            s.unexpectedExpense?.let { put("unexpectedExpense", UnexpectedExpenseCodec.encode(it)) }
+            put("carriedPlan", budget(s.carriedPlan))
+            put("periodAllocationBudget", s.periodAllocationBudget)
+            put("periodCompletedTasks", JSONArray(s.periodCompletedTasks.toList()))
+            put("dailyTaskDate", s.dailyTaskDate)
+            put(
+                "dailyTaskCompletions",
+                JSONObject(s.dailyTaskCompletions.mapKeys { it.key.toString() }),
+            )
+            s.taskAttempt?.let {
+                put(
+                    "taskAttempt",
+                    JSONObject()
+                        .put("taskId", it.taskId)
+                        .put("training", it.training)
+                        .put("claimId", it.claimId)
+                        .put("categoryItemIds", JSONArray(it.categoryItemIds))
+                        .put("draft", JSONArray(it.draft))
+                        .put("acceptedAnswer", JSONArray(it.acceptedAnswer))
+                        .put("tipDismissed", it.tipDismissed),
+                )
+            }
             put("paidRepeats", s.paidRepeats)
             put("taskEarnings", s.taskEarnings)
             put("recoveryEarnings", s.recoveryEarnings)
@@ -78,6 +101,7 @@ internal object ScenarioCodec {
                                 .put("successful", it.successful)
                                 .put("satiety", it.satiety)
                                 .put("care", it.care)
+                                .put("unexpectedNeedExpense", it.unexpectedNeedExpense)
                         )
                     }
                 },
@@ -93,12 +117,49 @@ internal object ScenarioCodec {
         fun strings(key: String): List<String> =
             j.optJSONArray(key)?.let { a -> List(a.length()) { a.getString(it) } } ?: emptyList()
         val collected = j.optJSONObject("collectedGoals")
+        val counts = j.optJSONObject("dailyTaskCompletions")
+        fun ints(source: JSONObject, key: String) =
+            source.optJSONArray(key)?.let { a -> List(a.length()) { a.getInt(it) } } ?: emptyList()
+        val previousAllocation =
+            j.optJSONObject("carriedPlan")?.let(::parseBudget)
+                ?: j.getJSONArray("reports").let { reports ->
+                    (0 until reports.length()).fold(BudgetAmounts()) { sum, index ->
+                        val report = reports.getJSONObject(index)
+                        if (report.getInt("period") < j.getInt("period"))
+                            sum + parseBudget(report.getJSONObject("plan"))
+                        else sum
+                    }
+                }
         return ScenarioState(
             planLocked = j.getBoolean("planLocked"),
             ownedItems = strings("ownedItems").toSet(),
             collectedGoals =
                 collected?.keys()?.asSequence()?.associateWith { collected.getInt(it) }
                     ?: emptyMap(),
+            roomId = j.optString("roomId", "default"),
+            unexpectedExpense =
+                j.optJSONObject("unexpectedExpense")?.let(UnexpectedExpenseCodec::decode),
+            carriedPlan = previousAllocation,
+            periodAllocationBudget =
+                if (j.isNull("periodAllocationBudget")) null
+                else j.getInt("periodAllocationBudget"),
+            periodCompletedTasks = ints(j, "periodCompletedTasks").toSet(),
+            dailyTaskDate = j.optString("dailyTaskDate", ""),
+            dailyTaskCompletions =
+                counts?.keys()?.asSequence()?.associate { it.toInt() to counts.getInt(it) }
+                    ?: emptyMap(),
+            taskAttempt =
+                j.optJSONObject("taskAttempt")?.let {
+                    TaskAttempt(
+                        taskId = it.getInt("taskId"),
+                        training = it.optBoolean("training"),
+                        claimId = it.getString("claimId"),
+                        categoryItemIds = ints(it, "categoryItemIds"),
+                        draft = ints(it, "draft"),
+                        acceptedAnswer = ints(it, "acceptedAnswer"),
+                        tipDismissed = it.optBoolean("tipDismissed"),
+                    )
+                },
             paidRepeats = j.getInt("paidRepeats"),
             // В снимках без отдельного счётчика восстанавливаем заработок текущего периода
             // из истории. Префиксы источников здесь являются частью совместимости формата.
@@ -170,6 +231,7 @@ internal object ScenarioCodec {
                                 it.getBoolean("successful"),
                                 if (it.isNull("satiety")) null else it.getInt("satiety"),
                                 if (it.isNull("care")) null else it.getInt("care"),
+                                it.optInt("unexpectedNeedExpense", 0),
                             )
                         }
                     }

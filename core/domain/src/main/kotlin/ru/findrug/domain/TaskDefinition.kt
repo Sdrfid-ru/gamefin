@@ -11,24 +11,20 @@ data class ScenarioTask(
     val description: String,
     val reward: Int,
     val exercise: Exercise,
-    val reflection: DecisionReflection? = null,
+    val introduction: String? = null,
 )
-
-/**
- * Необязательное обсуждение решения: у вариантов нет правильности и собственной награды. Условия
- * показа находятся в TaskPage; пояснения не участвуют в TaskEvaluator.
- */
-data class DecisionReflection(val context: String, val options: List<ReflectionOption>)
-
-data class ReflectionOption(val id: Int, val label: String, val explanation: String)
 
 /**
  * Новый тип взаимодействия требует поддержки в TaskEvaluator, TaskExercisePage и TaskAnswerState.
  * Для новых чисел, текстов и вариантов существующего типа достаточно данных каталога.
  */
 sealed interface Exercise {
-    data class Categories(val items: List<CategoryItem>, val hint: String, val success: String) :
-        Exercise
+    data class Categories(
+        val items: List<CategoryItem>,
+        val hint: String,
+        val success: String,
+        val sampleSize: Int = items.size,
+    ) : Exercise
 
     data class Budget(
         val total: Int,
@@ -44,6 +40,8 @@ sealed interface Exercise {
         val options: List<ChoiceOption>,
         val progress: ExerciseProgress? = null,
     ) : Exercise
+
+    data class Comparison(val levels: List<Choice>) : Exercise
 
     data class Basket(
         val total: Int,
@@ -81,20 +79,11 @@ object TaskDefinitions {
         tasks.forEach { task ->
             require(task.id >= 0 && task.reward in 1..150)
             require(listOf(task.title, task.topic, task.description).all { it.isNotBlank() })
-            task.reflection?.let { reflection ->
-                require(reflection.context.isNotBlank())
-                require(reflection.options.size in 2..3)
-                require(reflection.options.map { it.id }.distinct().size == reflection.options.size)
-                require(
-                    reflection.options.all {
-                        it.id >= 0 && it.label.isNotBlank() && it.explanation.isNotBlank()
-                    }
-                )
-            }
             when (val e = task.exercise) {
                 is Exercise.Categories -> {
                     require(
-                        e.items.size in 2..6 &&
+                        e.sampleSize in 2..8 &&
+                            e.items.size >= e.sampleSize &&
                             e.items.map { it.id }.distinct().size == e.items.size
                     )
                     require(
@@ -111,7 +100,7 @@ object TaskDefinitions {
                 }
                 is Exercise.Choice -> {
                     require(
-                        e.options.size in 2..3 &&
+                        e.options.size in 2..4 &&
                             e.options.map { it.id }.distinct().size == e.options.size
                     )
                     require(e.options.any { it.accepted })
@@ -122,6 +111,10 @@ object TaskDefinitions {
                     )
                     require(e.heading.isNotBlank() && e.prompt.isNotBlank())
                     e.progress?.let { require(it.target > 0 && it.current in 0..it.target) }
+                }
+                is Exercise.Comparison -> {
+                    require(e.levels.size in 2..5)
+                    e.levels.forEach { level -> validate(listOf(task.copy(exercise = level))) }
                 }
                 is Exercise.Basket -> {
                     require(e.total in 1..10000 && e.items.size in 2..4)

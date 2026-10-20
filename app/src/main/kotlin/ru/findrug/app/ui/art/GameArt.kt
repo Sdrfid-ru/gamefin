@@ -80,7 +80,45 @@ private val pictures =
         "💧" to R.drawable.item_water,
         "🧸" to R.drawable.item_toy,
         "🧢" to R.drawable.item_cap,
+        "goal_tent" to R.drawable.goal_tent,
+        "goal_construction_set" to R.drawable.goal_construction_set,
+        "goal_camera" to R.drawable.goal_camera,
+        "goal_star_projector" to R.drawable.goal_star_projector,
+        "category_need_umbrella" to R.drawable.category_need_umbrella,
+        "category_need_toothpaste" to R.drawable.category_need_toothpaste,
+        "category_need_toothbrush" to R.drawable.category_need_toothbrush,
+        "category_need_backpack" to R.drawable.category_need_backpack,
+        "category_need_apple" to R.drawable.category_need_apple,
+        "category_need_boots" to R.drawable.category_need_boots,
+        "category_need_jacket" to R.drawable.category_need_jacket,
+        "category_need_soup" to R.drawable.category_need_soup,
+        "category_need_bread" to R.drawable.category_need_bread,
+        "category_need_notebook" to R.drawable.category_need_notebook,
+        "category_want_game_console" to R.drawable.category_want_game_console,
+        "category_want_doll" to R.drawable.category_want_doll,
+        "category_want_teddy_bear" to R.drawable.category_want_teddy_bear,
+        "category_want_comic_book" to R.drawable.category_want_comic_book,
+        "category_want_robot" to R.drawable.category_want_robot,
+        "category_want_kite" to R.drawable.category_want_kite,
+        "category_want_ice_cream" to R.drawable.category_want_ice_cream,
+        "category_want_sunglasses" to R.drawable.category_want_sunglasses,
+        "category_want_skateboard" to R.drawable.category_want_skateboard,
+        "category_want_headphones" to R.drawable.category_want_headphones,
     )
+
+internal fun roomResource(id: String): Int =
+    when (id) {
+        "pets" -> R.drawable.room_pets
+        "astronomer" -> R.drawable.room_astronomer
+        "park" -> R.drawable.room_park
+        "scout" -> R.drawable.room_scout
+        "constructor" -> R.drawable.room_constructor
+        "sport" -> R.drawable.room_sport
+        "photographer" -> R.drawable.room_photographer
+        "projector" -> R.drawable.room_projector
+        else -> R.drawable.room_default
+    }
+
 private val vectors =
     mapOf(
         "⚙" to R.raw.figma_aaf70,

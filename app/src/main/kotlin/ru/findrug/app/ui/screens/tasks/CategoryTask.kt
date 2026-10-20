@@ -23,7 +23,6 @@ import ru.findrug.app.ui.art.GameIcon
 import ru.findrug.app.ui.art.TitleFont
 import ru.findrug.app.ui.components.GameButton
 import ru.findrug.app.ui.components.LocalCompactPage
-import ru.findrug.app.ui.components.Page
 import ru.findrug.app.ui.components.Panel
 import ru.findrug.app.ui.theme.Cream
 import ru.findrug.app.ui.theme.Ink
@@ -34,11 +33,25 @@ internal fun CategoryTask(
     title: String,
     exercise: Exercise.Categories,
     back: () -> Unit,
+    initialDraft: List<Int> = emptyList(),
+    updateDraft: (List<Int>) -> Unit = {},
+    help: TaskHelp? = null,
     done: (Set<Int>) -> Unit,
 ) {
     val items = exercise.items
     fun position(id: Int) = items.indexOfFirst { it.id == id }
-    var layout by rememberSaveable { mutableStateOf("-".repeat(items.size)) }
+    var layout by rememberSaveable {
+        mutableStateOf(
+            if (initialDraft.size == items.size)
+                initialDraft
+                    .map { if (it == 1) 'n' else if (it == 0) 'w' else '-' }
+                    .joinToString("")
+            else "-".repeat(items.size)
+        )
+    }
+    fun saveLayout() {
+        updateDraft(layout.map { if (it == 'n') 1 else if (it == 'w') 0 else -1 })
+    }
     var selected by rememberSaveable { mutableIntStateOf(-1) }
     var draggedId by remember { mutableIntStateOf(-1) }
     var feedback by rememberSaveable {
@@ -61,24 +74,25 @@ internal fun CategoryTask(
         layout =
             layout.toCharArray().also { it[position(id)] = if (need) 'n' else 'w' }.concatToString()
         selected = -1
+        saveLayout()
         feedback = "Можно изменить выбор. Когда всё готово, нажми «Проверить»."
     }
-    Page(
+    TaskScaffold(
         title,
         back,
+        help,
         actions = {
             GameButton("Проверить", enabled = placed == items.size) {
                 checked = true
-                val mistakes =
-                    items.filter { layout[position(it.id)] != if (it.needed) 'n' else 'w' }
-                if (mistakes.isEmpty())
-                    done(items.filter { layout[position(it.id)] == 'n' }.map { it.id }.toSet())
-                else feedback = "Проверь выделенные предметы. Исправь раскладку и попробуй ещё раз."
+                done(items.filter { layout[position(it.id)] == 'n' }.map { it.id }.toSet())
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                GameButton("Подсказка", true, modifier = Modifier.weight(1f)) { showHint = true }
+                GameButton("Подсказка", true, modifier = Modifier.weight(1f)) {
+                    if (help != null) help.open() else showHint = true
+                }
                 GameButton("Сбросить", true, modifier = Modifier.weight(1f)) {
                     layout = "-".repeat(items.size)
+                    saveLayout()
                     selected = -1
                     checked = false
                     feedback = "Начнём заново. Разложи предметы и нажми «Проверить»."
@@ -88,7 +102,8 @@ internal fun CategoryTask(
     ) {
         Panel { Text(feedback, fontSize = 13.sp) }
         val compact = LocalCompactPage.current
-        items.chunked(3).forEach { row ->
+        val columns = if (items.size > 6) 4 else 3
+        items.chunked(columns).forEach { row ->
             Row(
                 Modifier.fillMaxWidth().zIndex(if (row.any { it.id == draggedId }) 5f else 0f),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -165,7 +180,7 @@ internal fun CategoryTask(
                         )
                     }
                 }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -12,10 +12,26 @@ object TaskEvaluator {
     fun evaluate(task: ScenarioTask, answer: TaskAnswer): String =
         when (val e = task.exercise) {
             is Exercise.Categories -> {
+                val a = answer as? TaskAnswer.Categories ?: throw ScenarioRule(e.hint)
+                val ids =
+                    if (a.itemIds.isEmpty() && e.items.size == e.sampleSize) e.items.map { it.id }
+                    else a.itemIds
                 check(
-                    answer is TaskAnswer.Categories &&
-                        answer.need == e.items.filter { it.needed }.map { it.id }.toSet(),
-                    e.hint,
+                    ids.size == e.sampleSize &&
+                        ids.distinct().size == ids.size &&
+                        ids.all { id -> e.items.any { it.id == id } },
+                    "Разложи все ${e.sampleSize} предметов этой попытки.",
+                )
+                val shown = e.items.filter { it.id in ids }
+                val mistakes = shown.filter { (it.id in a.need) != it.needed }
+                check(
+                    shown.any { it.needed } &&
+                        shown.any { !it.needed } &&
+                        mistakes.isEmpty() &&
+                        a.need.all { it in ids },
+                    mistakes.take(2).joinToString(" ") {
+                        "«${it.title}» в этой ситуации относится к категории «${if (it.needed) "Нужно" else "Хочу"}»."
+                    } + " " + e.hint,
                 )
                 e.success
             }
@@ -38,6 +54,19 @@ object TaskEvaluator {
                         ?: throw ScenarioRule("Выбери ответ")
                 check(option.accepted, option.feedback)
                 option.feedback
+            }
+            is Exercise.Comparison -> {
+                val choices =
+                    (answer as? TaskAnswer.Comparison)?.options
+                        ?: throw ScenarioRule("Пройди все уровни сравнения.")
+                check(
+                    choices.size == e.levels.size,
+                    "Пройди все ${e.levels.size} уровней сравнения.",
+                )
+                e.levels.zip(choices).forEach { (level, choice) ->
+                    evaluate(task.copy(exercise = level), TaskAnswer.Choice(choice))
+                }
+                "Ты сравнил цены в ${e.levels.size} ситуациях, учёл нужное количество и бюджет!"
             }
             is Exercise.Basket -> {
                 val ids =

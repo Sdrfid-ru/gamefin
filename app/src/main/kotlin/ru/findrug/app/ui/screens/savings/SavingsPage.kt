@@ -8,6 +8,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import ru.findrug.app.ui.art.GameIcon
@@ -31,6 +33,7 @@ internal fun SavingsPage(
     collect: (ScenarioGoal) -> Unit,
     deposit: (Int) -> Unit,
     withdraw: (Int) -> Unit,
+    unexpectedExpense: () -> Unit = {},
 ) {
     var amount by rememberSaveable { mutableIntStateOf(30) }
     var choosing by rememberSaveable { mutableStateOf(s.goal == null) }
@@ -58,6 +61,32 @@ internal fun SavingsPage(
     Page(
         "Моя копилка",
         back,
+        headerAction = {
+            if (s.unexpectedExpense != null || UnexpectedExpenses.eligible(s)) {
+                val resolved = s.unexpectedExpense?.status == UnexpectedExpenseStatus.RESOLVED
+                IconButton(
+                    onClick = unexpectedExpense,
+                    modifier =
+                        Modifier.testTag("unexpected-expense-open").semantics {
+                            contentDescription =
+                                if (resolved) "История покупки новой миски"
+                                else "Непредвиденный расход: новая миска"
+                        },
+                ) {
+                    Box {
+                        GameIcon("🥣", 32.dp)
+                        if (!resolved)
+                            Text(
+                                "!",
+                                Modifier.align(Alignment.TopEnd),
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                            )
+                    }
+                }
+            }
+        },
         actions = {
             if (selecting) {
                 PageSelector(page, s.availableGoals.size) { page = it }
@@ -110,8 +139,10 @@ internal fun SavingsPage(
                 }
             }
             if (selecting) {
-                Text("${goal.price} монет")
-                Text("Выбери мечту, на которую хочешь накопить.")
+                Text(
+                    "${goal.price} монет · фон «${ScenarioContent.roomTitles[goal.roomId]}».",
+                    fontSize = 13.sp,
+                )
             } else {
                 Meter(s.savings, goal.price)
                 Text("Накоплено ${s.savings} / ${goal.price} · осталось ${goal.price - s.savings}")
@@ -138,7 +169,13 @@ internal fun SavingsPage(
                     Text("Чтобы пополнять копилку и забирать монеты, начни следующий период.")
             }
         }
-        if (selecting) Text("Копилка хранится отдельно от монет на покупки.", fontSize = 13.sp)
+        if (selecting) {
+            Text(
+                "Доступно целей: ${s.availableGoals.size}." +
+                    if (s.growthStage < 2) " На следующей стадии появятся ещё 2." else "",
+                fontSize = 13.sp,
+            )
+        }
     }
 }
 

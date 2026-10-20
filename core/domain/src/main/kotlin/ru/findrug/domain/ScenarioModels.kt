@@ -6,11 +6,14 @@ package ru.findrug.domain
  * учтённые накопления. valid проверяет суммы плана, где отрицательные значения запрещены.
  */
 data class BudgetAmounts(val need: Int = 0, val want: Int = 0, val save: Int = 0) {
+    operator fun plus(other: BudgetAmounts) =
+        BudgetAmounts(need + other.need, want + other.want, save + other.save)
+
     val total
         get() = need + want + save
 
     val valid
-        get() = listOf(need, want, save).all { it in 0..1_000_000 }
+        get() = need >= 0 && want >= 0 && save >= 0 && need.toLong() + want + save <= Int.MAX_VALUE
 }
 
 /** Числовые варианты внешности сохраняются как ID, а не как позиции кнопок в редакторе. */
@@ -37,6 +40,7 @@ data class PeriodReport(
     val successful: Boolean,
     val satiety: Int? = null,
     val care: Int? = null,
+    val unexpectedNeedExpense: Int = 0,
 ) {
     companion object {
         const val COMFORT_LEVEL = 60
@@ -85,6 +89,8 @@ data class ScenarioState(
     val planLocked: Boolean = false,
     val ownedItems: Set<String> = emptySet(),
     val collectedGoals: Map<String, Int> = emptyMap(),
+    val roomId: String = "default",
+    val unexpectedExpense: UnexpectedExpense? = null,
     val paidRepeats: Int = 0,
     val taskEarnings: Int = 0,
     val recoveryEarnings: Int = 0,
@@ -93,12 +99,18 @@ data class ScenarioState(
     val goalId: String? = null,
     val period: Int = 1,
     val plan: BudgetAmounts? = null,
+    val carriedPlan: BudgetAmounts = BudgetAmounts(),
+    val periodAllocationBudget: Int? = null,
     val actual: BudgetAmounts = BudgetAmounts(),
     val satiety: Int = 70,
     val mood: Int = 80,
     val care: Int = 70,
     val energy: Int = 100,
     val completedTasks: Set<Int> = emptySet(),
+    val periodCompletedTasks: Set<Int> = emptySet(),
+    val dailyTaskDate: String = "",
+    val dailyTaskCompletions: Map<Int, Int> = emptyMap(),
+    val taskAttempt: TaskAttempt? = null,
     val periodTasks: Int = 0,
     val rewardClaims: Set<String> = emptySet(),
     val purchases: List<String> = emptyList(),
@@ -110,6 +122,18 @@ data class ScenarioState(
     val petSounds: Boolean = true,
     val animations: Boolean = true,
 ) {
+    val budgetToAllocate
+        get() = periodAllocationBudget ?: coins
+
+    // Суммарное распределение — история решений, а не новый доступный баланс.
+    val cumulativePlan
+        get() = carriedPlan + (plan ?: BudgetAmounts())
+
+    val unlockedRooms
+        get() =
+            setOf("default") +
+                ScenarioContent.goals.filter { (collectedGoals[it.id] ?: 0) > 0 }.map { it.roomId }
+
     val planEditable
         get() = started && !periodClosed && !planLocked && actual.total == 0
 
@@ -123,13 +147,19 @@ data class ScenarioState(
 
     val availableGoals
         get() =
-            ScenarioContent.goals.map { base ->
-                val level = collectedGoals[base.id] ?: 0
-                base.copy(
-                    title = if (level == 0) base.title else "${base.title} · улучшение $level",
-                    price = base.price * (level + 1),
-                )
-            }
+            ScenarioContent.goals
+                .filter {
+                    it.growthStage <= growthStage ||
+                        it.id == goalId ||
+                        (collectedGoals[it.id] ?: 0) > 0
+                }
+                .map { base ->
+                    val level = collectedGoals[base.id] ?: 0
+                    base.copy(
+                        title = if (level == 0) base.title else "${base.title} · улучшение $level",
+                        price = base.price * (level + 1),
+                    )
+                }
 
     // Используем сохранённую оценку: изменение правил не отнимает уже заработанный рост.
     val successfulPeriods
@@ -146,8 +176,29 @@ data class ScenarioState(
     val goal
         get() = availableGoals.find { it.id == goalId }
 
+    /** Keep the catalog order inside each group; repeat lessons follow the unfinished ones. */
+    val orderedTasks
+        get() = ScenarioContent.tasks.sortedBy { it.id in periodCompletedTasks }
+
+    val resumableTaskAttempt: TaskAttempt?
+        get() {
+            if (!started || periodClosed) return null
+            val attempt = taskAttempt ?: return null
+            if (
+                attempt.claimId in rewardClaims || !ScenarioGame.taskAvailable(this, attempt.taskId)
+            )
+                return null
+            val definition =
+                runCatching { ScenarioContent.task(attempt.taskId, attempt.training) }.getOrNull()
+                    ?: return null
+            return attempt.takeIf { it.canResume(definition, it.training) }
+        }
+
     val recommendedTask
-        get() = ScenarioContent.tasks[(period - 1).coerceAtLeast(0) % ScenarioContent.tasks.size].id
+        get() =
+            resumableTaskAttempt?.takeUnless { it.training }?.taskId
+                ?: orderedTasks.firstOrNull { ScenarioGame.taskAvailable(this, it.id) }?.id
+                ?: orderedTasks.first().id
 }
 
 data class ScenarioProduct(
@@ -159,14 +210,23 @@ data class ScenarioProduct(
     val effect: String,
 )
 
-data class ScenarioGoal(val id: String, val title: String, val icon: String, val price: Int)
+data class ScenarioGoal(
+    val id: String,
+    val title: String,
+    val icon: String,
+    val price: Int,
+    val growthStage: Int = 0,
+    val roomId: String = "default",
+)
 
 sealed interface TaskAnswer {
-    data class Categories(val need: Set<Int>) : TaskAnswer
+    data class Categories(val need: Set<Int>, val itemIds: List<Int> = emptyList()) : TaskAnswer
 
     data class Budget(val amounts: BudgetAmounts) : TaskAnswer
 
     data class Choice(val option: Int) : TaskAnswer
+
+    data class Comparison(val options: List<Int>) : TaskAnswer
 
     data class Basket(val items: Set<Int>) : TaskAnswer
 }

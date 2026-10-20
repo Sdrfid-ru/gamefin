@@ -1,5 +1,6 @@
 package ru.findrug.domain
 
+import java.time.LocalDate
 import kotlin.test.*
 
 class PeriodEconomyTest {
@@ -12,14 +13,27 @@ class PeriodEconomyTest {
     @Test
     fun `hundreds of new claims cannot mint unlimited money`() {
         var s = fresh()
-        repeat(100) { s = ScenarioGame.reward(s, 4, TaskAnswer.Choice(1), "practice-$it", true) }
+        repeat(100) {
+            s =
+                ScenarioGame.reward(
+                    s,
+                    4,
+                    TaskAnswer.Choice(1),
+                    "practice-$it",
+                    true,
+                    date = LocalDate.of(2026, 1, 1).plusDays(it / 3L),
+                )
+        }
         assertEquals(350, s.coins)
         assertEquals(150, s.taskEarnings)
         assertEquals(15, s.paidRepeats)
-        val first = ScenarioGame.reward(s, 4, TaskAnswer.Choice(1), "first")
+        val first = ScenarioGame.reward(s, 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "first")
         assertEquals(350, first.coins)
         assertTrue(4 in first.completedTasks)
-        assertEquals(first, ScenarioGame.reward(first, 4, TaskAnswer.Choice(1), "first"))
+        assertEquals(
+            first,
+            ScenarioGame.reward(first, 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "first"),
+        )
     }
 
     @Test
@@ -42,7 +56,17 @@ class PeriodEconomyTest {
         assertEquals(20, s.recoveryEarnings)
         s = ScenarioGame.buy(s, "water")
         assertEquals(0, s.coins)
-        repeat(30) { s = ScenarioGame.reward(s, 4, TaskAnswer.Choice(1), "free-$it", true) }
+        repeat(30) {
+            s =
+                ScenarioGame.reward(
+                    s,
+                    4,
+                    TaskAnswer.Choice(1),
+                    "free-$it",
+                    true,
+                    date = LocalDate.now().plusDays(1 + it / 3L),
+                )
+        }
         assertEquals(0, s.coins)
         assertEquals(20, s.recoveryEarnings)
         val next = ScenarioGame.next(ScenarioGame.finish(s))

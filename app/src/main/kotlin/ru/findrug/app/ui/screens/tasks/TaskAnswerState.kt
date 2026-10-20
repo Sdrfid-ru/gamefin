@@ -10,10 +10,13 @@ import ru.findrug.domain.TaskAnswer
  */
 internal fun TaskAnswer.savedValues(): List<Int> =
     when (this) {
-        is TaskAnswer.Categories -> listOf(0) + need.sorted()
+        is TaskAnswer.Categories ->
+            if (itemIds.isEmpty()) listOf(0) + need.sorted()
+            else listOf(4, itemIds.size) + itemIds + need.sorted()
         is TaskAnswer.Budget -> listOf(1, amounts.need, amounts.want, amounts.save)
         is TaskAnswer.Choice -> listOf(2, option)
         is TaskAnswer.Basket -> listOf(3) + items.sorted()
+        is TaskAnswer.Comparison -> listOf(5) + options
     }
 
 internal fun List<Int>.restoredAnswer(): TaskAnswer? =
@@ -22,5 +25,21 @@ internal fun List<Int>.restoredAnswer(): TaskAnswer? =
         1 -> if (size == 4) TaskAnswer.Budget(BudgetAmounts(this[1], this[2], this[3])) else null
         2 -> getOrNull(1)?.let(TaskAnswer::Choice)
         3 -> TaskAnswer.Basket(drop(1).toSet())
+        4 ->
+            getOrNull(1)?.let { count ->
+                if (count !in 2..8 || size < count + 2) null
+                else {
+                    val ids = drop(2).take(count)
+                    val need = drop(count + 2)
+                    if (
+                        ids.distinct().size != count ||
+                            need.distinct().size != need.size ||
+                            need.any { it !in ids }
+                    )
+                        null
+                    else TaskAnswer.Categories(need.toSet(), ids)
+                }
+            }
+        5 -> TaskAnswer.Comparison(drop(1))
         else -> null
     }

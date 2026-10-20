@@ -24,6 +24,57 @@ class ScenarioStoreTest {
     }
 
     @Test
+    fun newGoalsRoomsBudgetAndTaskDraftSurviveRestartAndLegacySaveMigrates() {
+        val state =
+            ScenarioState(
+                profile = ScenarioProfile("Игрок"),
+                started = true,
+                period = 3,
+                collectedGoals = mapOf("house" to 1, "camera" to 1),
+                roomId = "photographer",
+                carriedPlan = BudgetAmounts(180, 100, 140),
+                periodAllocationBudget = 240,
+                plan = BudgetAmounts(90, 60, 90),
+                dailyTaskDate = "2026-10-20",
+                dailyTaskCompletions = mapOf(0 to 2, 4 to 3),
+                periodCompletedTasks = setOf(4),
+                taskAttempt =
+                    TaskAttempt(
+                        0,
+                        false,
+                        "resumable",
+                        listOf(0, 1, 2, 3, 6, 7, 16, 17),
+                        draft = listOf(1, 2, 0, 0, 0, 0, 0, 0),
+                        tipDismissed = true,
+                    ),
+                reports =
+                    listOf(
+                        PeriodReport(1, BudgetAmounts(80, 50, 70), BudgetAmounts(), true),
+                        PeriodReport(2, BudgetAmounts(100, 50, 70), BudgetAmounts(), true),
+                    ),
+            )
+        store().save(state)
+        assertEquals(state, store().read())
+        assertTrue("photographer" in store().read().unlockedRooms)
+        val legacy = ru.findrug.app.data.ScenarioCodec.encode(state)
+        listOf(
+                "carriedPlan",
+                "periodAllocationBudget",
+                "taskAttempt",
+                "roomId",
+                "dailyTaskDate",
+                "dailyTaskCompletions",
+                "periodCompletedTasks",
+            )
+            .forEach(legacy::remove)
+        val migrated = ru.findrug.app.data.ScenarioCodec.decode(legacy)
+        assertEquals(state.carriedPlan, migrated.carriedPlan)
+        assertEquals(state.collectedGoals, migrated.collectedGoals)
+        assertNull(migrated.taskAttempt)
+        assertEquals("default", migrated.roomId)
+    }
+
+    @Test
     fun reportKeepsPetConditionAndPreviouslyEarnedGrowth() {
         val legacy = PeriodReport(1, BudgetAmounts(), BudgetAmounts(), true)
         val current =
@@ -49,13 +100,18 @@ class ScenarioStoreTest {
         s = ScenarioGame.selectGoal(s, "bike")
         s = ScenarioGame.buy(s, "food")
         s = ScenarioGame.deposit(s, 80)
-        s = ScenarioGame.reward(s, 4, TaskAnswer.Choice(1), "first")
+        s = ScenarioGame.reward(s, 4, TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)), "first")
         s = ScenarioGame.finish(s).copy(sound = false, petSounds = false, animations = false)
         store().save(s)
         assertEquals(s, store().read())
         assertEquals(
             s,
-            ScenarioGame.reward(s.copy(periodClosed = false), 4, TaskAnswer.Choice(1), "first")
+            ScenarioGame.reward(
+                    s.copy(periodClosed = false),
+                    4,
+                    TaskAnswer.Comparison(listOf(1, 1, 2, 2, 1)),
+                    "first",
+                )
                 .copy(periodClosed = true),
         )
     }
@@ -133,7 +189,7 @@ class ScenarioStoreTest {
         store().save(s)
         val restored = store().read()
         assertEquals(s, restored)
-        assertEquals(10, ScenarioGame.rewardAmount(restored, 4, true))
+        assertEquals(0, ScenarioGame.rewardAmount(restored, 4, true))
         assertEquals(1, restored.collectedGoals["house"])
         assertTrue("cap" in restored.ownedItems)
         assertFalse(restored.planEditable)

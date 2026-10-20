@@ -1,5 +1,7 @@
 package ru.findrug.domain
 
+import java.time.LocalDate
+
 /**
  * Правила локальной игры: проверяют действие и возвращают новый снимок, не меняя исходный. Запись
  * на диск и показ ошибок принадлежат GameViewModel. Новые финансовые действия добавляйте сюда,
@@ -54,10 +56,15 @@ object ScenarioGame {
             "После первой покупки или перевода план фиксируется для сравнения с фактом",
         )
         check(
-            amounts.valid && amounts.total <= s.coins,
+            amounts.valid && amounts.total <= s.budgetToAllocate,
             "Сумма плана не должна превышать доступный бюджет",
         )
         return s.copy(plan = amounts)
+    }
+
+    fun selectRoom(s: ScenarioState, id: String): ScenarioState {
+        check(id in s.unlockedRooms, "Этот фон откроется после достижения цели")
+        return s.copy(roomId = id)
     }
 
     private fun canAct(s: ScenarioState) {
@@ -163,14 +170,28 @@ object ScenarioGame {
             goalId = null,
             planLocked = s.planLocked || (s.plan != null && !s.periodClosed),
             collectedGoals = s.collectedGoals + (goal.id to ((s.collectedGoals[goal.id] ?: 0) + 1)),
+            roomId = goal.roomId,
             history =
                 s.history +
                     CoinEntry("Получена цель: ${goal.title}", -goal.price, s.period, "savings"),
         )
     }
 
-    fun rewardAmount(s: ScenarioState, task: Int, training: Boolean = false): Int =
-        PeriodEconomy.reward(s, ScenarioContent.task(task, training), training)
+    fun taskCompletionsToday(s: ScenarioState, task: Int, date: LocalDate = LocalDate.now()): Int =
+        if (s.dailyTaskDate == date.toString()) s.dailyTaskCompletions[task] ?: 0 else 0
+
+    fun taskAvailable(s: ScenarioState, task: Int, date: LocalDate = LocalDate.now()): Boolean =
+        taskCompletionsToday(s, task, date) < 3
+
+    fun rewardAmount(
+        s: ScenarioState,
+        task: Int,
+        training: Boolean = false,
+        date: LocalDate = LocalDate.now(),
+    ): Int =
+        if (taskAvailable(s, task, date))
+            PeriodEconomy.reward(s, ScenarioContent.task(task, training), training)
+        else 0
 
     fun answer(task: Int, answer: TaskAnswer, training: Boolean = false): String =
         TaskEvaluator.evaluate(ScenarioContent.task(task, training), answer)
@@ -181,20 +202,46 @@ object ScenarioGame {
         answer: TaskAnswer,
         claim: String,
         training: Boolean = false,
+        date: LocalDate = LocalDate.now(),
     ): ScenarioState {
         check(s.started && !s.periodClosed, "Начни период")
         answer(task, answer, training)
         // Один claim соответствует одной попытке. Он сохраняется вместе с балансом, чтобы
         // повторный вызов после восстановления экрана не начислил ту же награду второй раз.
         if (claim in s.rewardClaims) return s
-        val amount = rewardAmount(s, task, training)
+        check(claim.isNotBlank(), "Начни новую попытку")
+        check(
+            taskAvailable(s, task, date),
+            "Это задание уже пройдено 3 раза сегодня. Возвращайся завтра!",
+        )
+        s.taskAttempt
+            ?.takeIf { it.claimId == claim }
+            ?.let { attempt ->
+                check(
+                    attempt.taskId == task && attempt.training == training,
+                    "Продолжи своё задание",
+                )
+                if (answer is TaskAnswer.Categories)
+                    check(
+                        answer.itemIds == attempt.categoryItemIds,
+                        "Разложи предметы своей попытки",
+                    )
+            }
+        val amount = rewardAmount(s, task, training, date)
         val repeated = training || task in s.completedTasks
+        val daily = if (s.dailyTaskDate == date.toString()) s.dailyTaskCompletions else emptyMap()
         return s.copy(
             coins = s.coins + amount,
             taskEarnings = s.taskEarnings + if (PeriodEconomy.taskRemaining(s) > 0) amount else 0,
             recoveryEarnings =
                 s.recoveryEarnings + if (PeriodEconomy.taskRemaining(s) == 0) amount else 0,
             completedTasks = if (training) s.completedTasks else s.completedTasks + task,
+            periodCompletedTasks =
+                if (training) s.periodCompletedTasks else s.periodCompletedTasks + task,
+            dailyTaskDate = date.toString(),
+            dailyTaskCompletions = daily + (task to ((daily[task] ?: 0) + 1)),
+            taskAttempt =
+                s.taskAttempt?.takeUnless { it.taskId == task && it.training == training },
             paidRepeats = s.paidRepeats + if (repeated && amount > 0) 1 else 0,
             periodTasks = s.periodTasks + 1,
             rewardClaims = s.rewardClaims + claim,
@@ -215,7 +262,16 @@ object ScenarioGame {
         check(s.periodTasks > 0, "Выполни хотя бы одно задание")
         // Снимок потребностей нужен именно на момент завершения: последующие покупки
         // не должны менять оценку прошлого периода и уже заработанную стадию питомца.
-        val report = PeriodReport(s.period, plan, s.actual, false, s.satiety, s.care)
+        val report =
+            PeriodReport(
+                s.period,
+                plan,
+                s.actual,
+                false,
+                s.satiety,
+                s.care,
+                if (s.unexpectedExpense?.paidPeriod == s.period) UnexpectedExpenses.PRICE else 0,
+            )
         return s.copy(
             periodClosed = true,
             reports =
@@ -231,6 +287,11 @@ object ScenarioGame {
 
     fun feedback(report: PeriodReport): PeriodFeedback {
         val strengths = buildList {
+            if (report.unexpectedNeedExpense > 0)
+                add(
+                    "В плане появился непредвиденный нужный расход: новая миска за " +
+                        "${report.unexpectedNeedExpense} монет. Поэтому расходы на важное могли вырасти."
+                )
             if (report.needsProvided)
                 add(
                     if (report.satiety != null) "Лисёнок сыт и ухожен: его потребности закрыты."
@@ -290,12 +351,16 @@ object ScenarioGame {
             period = period,
             coins = s.coins + income,
             plan = null,
+            carriedPlan = s.cumulativePlan,
+            periodAllocationBudget = income,
             planLocked = false,
             paidRepeats = 0,
             taskEarnings = 0,
             recoveryEarnings = 0,
             actual = BudgetAmounts(),
             periodTasks = 0,
+            periodCompletedTasks = emptySet(),
+            taskAttempt = null,
             periodClosed = false,
             satiety = (s.satiety - 15).coerceAtLeast(40),
             care = (s.care - 10).coerceAtLeast(40),

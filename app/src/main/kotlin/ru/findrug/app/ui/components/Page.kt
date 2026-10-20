@@ -31,6 +31,8 @@ internal fun Page(
     title: String,
     back: (() -> Unit)?,
     actions: @Composable ColumnScope.() -> Unit = {},
+    headerAction: @Composable () -> Unit = {},
+    supportingContent: @Composable () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -55,6 +57,7 @@ internal fun Page(
                         color = Ink,
                         modifier = Modifier.weight(1f),
                     )
+                    headerAction()
                 }
                 Column(
                     Modifier.weight(1f)
@@ -65,6 +68,7 @@ internal fun Page(
                     verticalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 8.dp),
                     content = content,
                 )
+                supportingContent()
                 Column(
                     Modifier.fillMaxWidth().testTag("page-actions"),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
