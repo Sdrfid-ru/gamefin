@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
@@ -50,21 +51,32 @@ internal fun PetEditor(
     var page by rememberSaveable { mutableIntStateOf(0) }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // Размер превью использует свободную высоту после резерва под настройки и «Сохранить».
-        val controlsHeight = if (tab == 3 && !capOwned) 440.dp else 400.dp
+        val controlsHeight =
+            (if (tab == 3 && !capOwned) 440.dp else 400.dp) + if (initial) 24.dp else 0.dp
         val previewHeight = (maxHeight - controlsHeight).coerceIn(120.dp, 340.dp)
         Page(
             "Твой ФинДруг",
             back,
             actions = {
-                PageSelector(page, 2) { page = it }
+                if (!initial) PageSelector(page, 2) { page = it }
                 GameButton("Сохранить", enabled = name.isNotBlank() && player.isNotBlank()) {
                     save(preview.copy(player = player))
                 }
             },
         ) {
             if (page == 0) {
-                Fox(preview, Modifier.fillMaxWidth().height(previewHeight))
+                if (!initial || WindowInsets.ime.getBottom(LocalDensity.current) == 0)
+                    Fox(preview, Modifier.fillMaxWidth().height(previewHeight))
                 Panel {
+                    if (initial)
+                        OutlinedTextField(
+                            name,
+                            { name = it.take(20) },
+                            label = { Text("Имя питомца") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = CircleShape,
+                        )
                     Row(
                         Modifier.fillMaxWidth()
                             .background(Color(0xFFE8E9F8), RoundedCornerShape(22.dp))

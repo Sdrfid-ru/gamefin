@@ -228,6 +228,45 @@ class EmulatorEdgeCaseTest {
     }
 
     @Test
+    fun characterCreationEditsNameAndAppearanceTogetherAndPersistsBoth() {
+        val restoration = start(ScenarioState(sound = false, animations = false))
+        tap("Начать")
+        ui.onNodeWithText("Игровое имя").performTextInput("Алекс")
+        closeSoftKeyboard()
+        tap("Продолжить")
+        tap("Серый")
+        ui.onNodeWithTag("page-next").assertDoesNotExist()
+        ui.onNodeWithText("Имя питомца").assertIsDisplayed().performTextReplacement("   ")
+        ui.onNodeWithText("Сохранить").assertIsNotEnabled()
+        ui.onNodeWithText("Имя питомца").performTextReplacement("ОченьДлинноеИмяЛисёнка")
+        ui.onNodeWithText("Имя питомца").assertTextContains("ОченьДлинноеИмяЛисён")
+        ui.onNodeWithText("Имя питомца").performTextReplacement("  Пушок  ")
+        closeSoftKeyboard()
+        restoration.emulateSavedInstanceStateRestore()
+        ui.onNodeWithText("Имя питомца").assertTextContains("  Пушок  ")
+        ui.onNodeWithText("Серый").assertIsSelected()
+        ui.onNodeWithText("Имя питомца").assertIsDisplayed()
+        ui.onNodeWithText("Сохранить").assertIsDisplayed()
+        InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().let { bitmap ->
+            java.io
+                .File(context.getExternalFilesDir(null), "character-name.png")
+                .outputStream()
+                .use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            bitmap.recycle()
+        }
+        tap("Сохранить")
+        ui.waitUntil(30_000) { store.read().profile?.pet == "Пушок" }
+        assertEquals(ScenarioProfile("Алекс", pet = "Пушок", color = 2), store.read().profile)
+        tap("Получить")
+        notice()
+        tap("Профиль")
+        ui.onNodeWithText("Твой ФинДруг — Пушок").assertIsDisplayed()
+        tap("Изменить имя и образ")
+        next()
+        ui.onNodeWithText("Имя питомца").assertTextContains("Пушок")
+    }
+
+    @Test
     fun newPlayerCompletesAllExercisesFivePeriodsAndReceivesGoal() {
         start(ScenarioState(sound = false, animations = false))
         tap("Начать")
@@ -235,7 +274,6 @@ class EmulatorEdgeCaseTest {
         ui.onNodeWithText("Игровое имя").performTextInput("Игрок")
         closeSoftKeyboard()
         tap("Продолжить")
-        next()
         ui.onNodeWithText("Имя питомца").performTextReplacement("Пушок")
         closeSoftKeyboard()
         tap("Сохранить")
