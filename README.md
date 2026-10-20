@@ -7,6 +7,12 @@ Android-игра о финансовой грамотности для дете�
 
 **0.14.0**, Android 8.0 и новее. Игра работает локально, без подключения к серверу.
 
+Финальная сборка для сдачи закреплена тегом **`final`**:
+[релиз и APK](https://github.com/Sdrfid-ru/gamefin/releases/tag/final),
+[исходники](https://github.com/Sdrfid-ru/gamefin/tree/final),
+[инструкция](https://github.com/Sdrfid-ru/gamefin/releases/download/final/DOCUMENTATION.docx).
+Релиз содержит подписанный `gamefin-release.apk`, контрольную сумму SHA-256 и актуальную инструкцию.
+
 - Профиль и настройка внешности лисёнка, анимация и звуки.
 - Бюджет «Нужно / Хочу / Коплю», редактируемый до первого финансового действия. Прежнее распределение сохраняется; в новом периоде распределяются новые монеты.
 - Шесть заданий с подсказками лисёнка в облачке прямо на экране, короткие тренировки и ограниченные награды за период. Подсказку можно закрыть крестиком и открыть снова кнопкой «?». Каждое задание можно завершить не более трёх раз за календарный день; основной режим и тренировка используют общий лимит.
@@ -130,12 +136,13 @@ chmod +x gradlew
 Сборку также можно запустить вручную через Actions → workflow релиза → Run workflow,
 выбрав ветку `main`.
 
-[Последний релиз](https://github.com/Sdrfid-ru/gamefin/releases/latest) ·
-[Скачать релизный APK](https://github.com/Sdrfid-ru/gamefin/releases/latest/download/gamefin-release.apk)
+[Финальный релиз для сдачи](https://github.com/Sdrfid-ru/gamefin/releases/tag/final) ·
+[Скачать финальный APK](https://github.com/Sdrfid-ru/gamefin/releases/download/final/gamefin-release.apk)
 
-Каждая сборка получает тег `build-<github run_id>` и название
+Каждая автоматическая сборка получает тег `build-<github run_id>` и название
 `FinDrug <version> build <run_number>`. Версия приложения берётся из `app/build.gradle.kts`;
 для обновления приложения увеличивайте `versionCode` вручную и меняйте `versionName` по необходимости.
+Тег `final` отдельно фиксирует версию, выбранную для финальной сдачи.
 
 Для подписи нужны два repository secret в GitHub Actions:
 
